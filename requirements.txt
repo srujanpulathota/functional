@@ -1,0 +1,5 @@
+azure-functions
+azure-identity
+azure-keyvault-secrets
+azure-keyvault-keys
+azure-keyvault-certificates
