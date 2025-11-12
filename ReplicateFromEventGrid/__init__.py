@@ -1,4 +1,6 @@
 import os
+import re
+import json
 import logging
 import azure.functions as func
 
@@ -7,31 +9,75 @@ from azure.keyvault.secrets import SecretClient
 from azure.keyvault.keys import KeyClient, KeyType
 from azure.keyvault.certificates import CertificateClient
 
-# If you use a User-Assigned Managed Identity, set AZURE_CLIENT_ID app setting to that UAMI's client ID.
 cred = ManagedIdentityCredential()
+
+ALLOWED_EVENTS = (
+    "Microsoft.KeyVault.SecretNewVersionCreated",
+    "Microsoft.KeyVault.KeyNewVersionCreated",
+    "Microsoft.KeyVault.CertificateNewVersionCreated",
+)
 
 def kv_url(name: str) -> str:
     return f"https://{name}.vault.azure.net"
 
-def main(event: func.EventGridEvent):
-    logging.info("KV Replicator (EventGrid) triggered.")
+def parse_from_topic(topic: str):
+    if not topic:
+        return None
+    m = re.search(r"/providers/microsoft\.keyvault/vaults/([^/]+)", topic, re.IGNORECASE)
+    return m.group(1) if m else None
+
+def parse_from_subject(subject: str):
+    if not subject:
+        return None, None, None
+    parts = [p for p in subject.split("/") if p]
+    if len(parts) >= 2:
+        obj_type_raw, obj_name = parts[0].lower(), parts[1]
+        version = parts[2] if len(parts) >= 3 else None
+        if obj_type_raw.startswith("secret"):
+            return "Secret", obj_name, version
+        if obj_type_raw.startswith("key"):
+            return "Key", obj_name, version
+        if obj_type_raw.startswith("certificate"):
+            return "Certificate", obj_name, version
+    return None, None, None
+
+def extract_fields(ev: func.EventGridEvent):
     try:
-        data = event.get_json() or {}
+        data = ev.get_json() or {}
     except Exception:
-        logging.exception("Failed to parse Event Grid data.")
+        logging.exception("Failed to parse Event Grid JSON body")
+        data = {}
+
+    event_type = getattr(ev, "event_type", None) or data.get("eventType")
+    vault = data.get("vaultName")
+    obj_type = data.get("objectType")
+    obj_name = data.get("objectName")
+    version  = data.get("version")
+
+    if not vault:
+        vault = parse_from_topic(getattr(ev, "topic", None))
+
+    if not (obj_type and obj_name):
+        t, n, v = parse_from_subject(getattr(ev, "subject", None))
+        obj_type = obj_type or t
+        obj_name = obj_name or n
+        version  = version  or v
+
+    return event_type, vault, obj_type, obj_name, version
+
+def main(event: func.EventGridEvent):
+    event_type, src_vault, obj_type, obj_name, version = extract_fields(event)
+    tgt_vault = os.environ.get("TARGET_VAULT_NAME")
+
+    logging.info(f"KV Replicator triggered. type={event_type} src={src_vault} objType={obj_type} objName={obj_name} version={version} tgt={tgt_vault} subject={getattr(event, 'subject', None)} topic={getattr(event, 'topic', None)}")
+
+    if event_type not in ALLOWED_EVENTS:
+        logging.info(f"Ignoring event type: {event_type}")
         return
 
-    event_type = event.event_type or ""
-    obj_name   = data.get("objectName")
-    version    = data.get("version")
-    src_vault  = data.get("vaultName")
-    tgt_vault  = os.environ.get("TARGET_VAULT_NAME")
-
-    if not (obj_name and src_vault and tgt_vault):
-        logging.error(f"Missing required fields. objectName={obj_name}, src={src_vault}, tgt={tgt_vault}")
+    if not (src_vault and obj_name and tgt_vault):
+        logging.error(f"Missing required fields after fallback. objectName={obj_name}, src={src_vault}, tgt={tgt_vault}")
         return
-
-    logging.info(f"EventType={event_type} Name={obj_name} Version={version} Src={src_vault} Tgt={tgt_vault}")
 
     try:
         if event_type.endswith("SecretNewVersionCreated"):
@@ -41,7 +87,7 @@ def main(event: func.EventGridEvent):
         elif event_type.endswith("CertificateNewVersionCreated"):
             replicate_certificate_public(src_vault, tgt_vault, obj_name, version)
         else:
-            logging.info(f"Ignored event type: {event_type}")
+            logging.info(f"Unhandled event type: {event_type}")
     except Exception:
         logging.exception("Replication failed.")
 
@@ -49,29 +95,24 @@ def replicate_secret(src: str, tgt: str, name: str, version: str):
     src_client = SecretClient(kv_url(src), cred)
     tgt_client = SecretClient(kv_url(tgt), cred)
 
-    # Read the new version from source
     secret = src_client.get_secret(name, version=version)
-    # Write a new version on target with same value and contentType
     set_resp = tgt_client.set_secret(name, secret.value, content_type=secret.properties.content_type)
 
-    # Copy tags (requires an update of properties)
     if secret.properties.tags:
         props = tgt_client.get_secret(name).properties
         props.tags = secret.properties.tags
         tgt_client.update_secret_properties(props)
 
-    logging.info(f"[Secret] {name} → replicated. Target version={set_resp.properties.version}")
+    logging.info(f"[Secret] {name} replicated to {tgt}. targetVersion={set_resp.properties.version}")
 
 def replicate_key_metadata(src: str, tgt: str, name: str, version: str):
     src_client = KeyClient(kv_url(src), cred)
     tgt_client = KeyClient(kv_url(tgt), cred)
 
-    # You cannot export non-exportable private key material from Key Vault.
     key = src_client.get_key(name, version=version)
     kty = key.key_type
     ops = key.key_operations
 
-    # Create a comparable key on target (material is different by design)
     if kty in (KeyType.rsa, KeyType.rsa_hsm):
         size = getattr(key.key, "size", None) or 2048
         tgt_client.create_rsa_key(name=name, size=size, hardware_protected=False, key_operations=ops)
@@ -79,29 +120,26 @@ def replicate_key_metadata(src: str, tgt: str, name: str, version: str):
         curve = getattr(key.key, "crv", None) or "P-256"
         tgt_client.create_ec_key(name=name, curve=curve, hardware_protected=False, key_operations=ops)
     else:
-        logging.warning(f"[Key] Type {kty} not auto-handled. Skipping {name}.")
+        logging.warning(f"[Key] Type {kty} not supported for auto-create. Skipping {name}.")
         return
 
-    # Copy tags (if any)
     if key.properties.tags:
         props = tgt_client.get_key(name).properties
         props.tags = key.properties.tags
         tgt_client.update_key_properties(props)
 
-    logging.info(f"[Key] {name} → comparable key created on target (material not copied).")
+    logging.info(f"[Key] {name} created on target (comparable key; material not copied).")
 
 def replicate_certificate_public(src: str, tgt: str, name: str, version: str):
     src_client = CertificateClient(kv_url(src), cred)
     tgt_client = CertificateClient(kv_url(tgt), cred)
 
     cert = src_client.get_certificate_version(name, version)
-    # Import only the public certificate. Private key cannot be exported from KV if non-exportable.
     tgt_client.import_certificate(name=name, certificate_bytes=cert.cer)
 
-    # Copy tags (if any)
     if cert.properties.tags:
         props = tgt_client.get_certificate(name).properties
         props.tags = cert.properties.tags
         tgt_client.update_certificate_properties(props)
 
-    logging.info(f"[Cert] {name} → public certificate replicated.")
+    logging.info(f"[Cert] {name} public certificate replicated to {tgt}.")
