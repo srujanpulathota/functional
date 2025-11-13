@@ -1,0 +1,10 @@
+2025-11-12T04:02:53.298 [Error] Missing required fields. objectName=None, src=None, tgt=https://qatioticpscu-vault0.vault.azure.net
+2025-11-12T04:02:53.308 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=55ff5895-9879-412d-9424-a451a2f45e80, Duration=41ms)
+2025-11-12T04:35:16.476 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-12T04:35:16.4653701+00:00', Id=8b93f45d-d264-46c5-b9af-dcb20ae1e2b8)
+2025-11-12T04:35:16.499 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=None objName=None version=None tgt=https://qatioticpscu-vault0.vault.azure.net subject=0609 topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0
+2025-11-12T04:35:16.500 [Error] Missing required fields after fallback. objectName=None, src=qatioticpwu2-vault0, tgt=https://qatioticpscu-vault0.vault.azure.net
+2025-11-12T04:35:16.511 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=8b93f45d-d264-46c5-b9af-dcb20ae1e2b8, Duration=44ms)
+2025-11-12T04:37:25.289 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-12T04:37:25.2780962+00:00', Id=e90587f6-386d-4e81-bc10-a58e2f64caf1)
+2025-11-12T04:37:25.313 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=None objName=None version=None tgt=qatioticpscu-vault0 subject=2469 topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0
+2025-11-12T04:37:25.314 [Error] Missing required fields after fallback. objectName=None, src=qatioticpwu2-vault0, tgt=qatioticpscu-vault0
+2025-11-12T04:37:25.324 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=e90587f6-386d-4e81-bc10-a58e2f64caf1, Duration=43ms)
