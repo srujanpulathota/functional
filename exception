@@ -1,8 +1,55 @@
-2025-11-13T03:25:27.707 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-13T03:25:27.6992152+00:00', Id=e78fdb98-6562-48ca-a768-9d5630186708)
-2025-11-13T03:25:27.728 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=None objName=None version=None tgt=qatioticpscu-vault0 subject=9096 topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0 raw={"Id": "https://qatioticpwu2-vault0.vault.azure.net/secrets/9096/ea31ade226914db2a5e0b4718ab961c3", "VaultName": "qatioticpwu2-vault0", "ObjectType": "Secret", "ObjectName": "9096", "Version": "ea31ade226914db2a5e0b4718ab961c3", "NBF": null, "EXP": null}
-2025-11-13T03:25:27.728 [Error] Missing required fields after fallback. objectName=None, src=qatioticpwu2-vault0, tgt=qatioticpscu-vault0, ver=None
-2025-11-13T03:25:27.738 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=e78fdb98-6562-48ca-a768-9d5630186708, Duration=37ms)
-2025-11-13T03:25:27.707 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-13T03:25:27.6992152+00:00', Id=e78fdb98-6562-48ca-a768-9d5630186708)
-2025-11-13T03:25:27.728 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=None objName=None version=None tgt=qatioticpscu-vault0 subject=9096 topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0 raw={"Id": "https://qatioticpwu2-vault0.vault.azure.net/secrets/9096/ea31ade226914db2a5e0b4718ab961c3", "VaultName": "qatioticpwu2-vault0", "ObjectType": "Secret", "ObjectName": "9096", "Version": "ea31ade226914db2a5e0b4718ab961c3", "NBF": null, "EXP": null}
-2025-11-13T03:25:27.728 [Error] Missing required fields after fallback. objectName=None, src=qatioticpwu2-vault0, tgt=qatioticpscu-vault0, ver=None
-2025-11-13T03:25:27.738 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=e78fdb98-6562-48ca-a768-9d5630186708, Duration=37ms)
+    'Content-Length': '97'
+2025-11-13T03:45:55.402 [Information] AppServiceCredential.get_token_info succeeded
+2025-11-13T03:45:55.402 [Information] ManagedIdentityCredential.get_token_info succeeded
+2025-11-13T03:45:55.402 [Information] Request URL: 'https://qatioticpscu-vault0.vault.azure.net/secrets/AHAN?api-version=REDACTED'
+Request method: 'PUT'
+Request headers:
+    'Content-Type': 'application/json'
+    'Content-Length': '19'
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '41fc02d8-c043-11f0-930c-d6f266b69206'
+    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+    'Authorization': 'REDACTED'
+A body is sent with the request
+2025-11-13T03:45:55.480 [Information] Response status: 403
+Response headers:
+    'Cache-Control': 'no-cache'
+    'Pragma': 'no-cache'
+    'Content-Type': 'application/json; charset=utf-8'
+    'Expires': '-1'
+    'x-ms-keyvault-region': 'South Central US'
+    'x-ms-client-request-id': '41fc02d8-c043-11f0-930c-d6f266b69206'
+    'x-ms-request-id': '7e59ab9e-9428-4b39-89a0-83a8029b574a'
+    'x-ms-keyvault-service-version': '1.9.2851.1'
+    'x-ms-keyvault-network-info': 'conn_type=Subnet;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'Date': 'Thu, 13 Nov 2025 03:45:55 GMT'
+    'Content-Length': '703'
+2025-11-13T03:45:55.483 [Error] Replication failed.
+Traceback (most recent call last):
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 156, in main
+    replicate_secret(src_vault, tgt_vault_name, obj_name, version)
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 174, in replicate_secret
+    set_resp = tgt_client.set_secret(name, secret.value, content_type=secret.properties.content_type)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_client.py", line 127, in set_secret
+    bundle = self._client.set_secret(
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 500, in set_secret
+    raise HttpResponseError(response=response, model=error)
+azure.core.exceptions.HttpResponseError: (Forbidden) Client address is not authorized and caller is not a trusted service.
+Client address: 0.0.0.0
+Caller: appid=b080420a-cf9a-4b7a-bfa8-3359ac5d6643;oid=3829592d-973e-4a43-89ab-fb85900ce0df;iss=https://sts.windows.net/be0f980b-dd99-4b19-bd7b-bc71a09b026c/;xms_mirid=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.Web/sites/icpqatkeyvaultsync;xms_az_rid=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.Web/sites/icpqatkeyvaultsync
+Vault: qatioticpScu-vault0;location=SouthCentralUS
+Code: Forbidden
+Message: Client address is not authorized and caller is not a trusted service.
+Client address: 0.0.0.0
+Caller: appid=b080420a-cf9a-4b7a-bfa8-3359ac5d6643;oid=3829592d-973e-4a43-89ab-fb85900ce0df;iss=https://sts.windows.net/be0f980b-dd99-4b19-bd7b-bc71a09b026c/;xms_mirid=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.Web/sites/icpqatkeyvaultsync;xms_az_rid=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.Web/sites/icpqatkeyvaultsync
+Vault: qatioticpScu-vault0;location=SouthCentralUS
+Inner error: {
+    "code": "ForbiddenByFirewall"
+}
+2025-11-13T03:45:55.497 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=077264f0-d55b-42cf-a4b1-2b0ed64b0143, Duration=1679ms)
