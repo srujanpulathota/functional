@@ -1,407 +1,210 @@
-2025-11-13T03:45:55.497 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=077264f0-d55b-42cf-a4b1-2b0ed64b0143, Duration=1679ms)
-/home/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-26Z-0d53502f25.log  (https://icpqatkeyvaultsync.scm.azurewebsites.net/api/vfs/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-26Z-0d53502f25.log)
-    'x-ms-client-request-id': '97d06f8c-c1e2-11f0-ae69-925d3fe96cba'
-    'x-ms-request-id': '03467658-9250-4bfe-89d3-e9444d19b153'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sat, 15 Nov 2025 05:18:59 GMT'
-    'Content-Length': '244'
-2025-11-15T05:19:00.778 [Information] [Secret] 98Sravani ??? replicated to 'qatioticpscu-vault0'. Target version=bde41976387d41ef80db88e2660dfd36
-2025-11-15T05:19:00.798 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=fd39e764-fad8-4feb-9b45-53f6295bcb9e, Duration=1527ms)
-Ending Log Tail of existing logs ---
-Starting Live Log Stream ---
-2025-11-16T04:33:49  No new trace in the past 1 min(s).
-2025-11-16T04:34:18.758 [Information] ExtensionSystemOptions
-{
-  "extensionName": "eventgrid",
-  "webhookAuthorizationLevel": "System"
-}
-2025-11-16T04:34:18.801 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T04:34:18.7928685+00:00', Id=d550c268-14a5-4070-a0ff-50f4bff80bd4)
-2025-11-16T04:34:18.825 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpScu-vault0 objType=secret objName=AASRETeam version=a367249d06ae48109ba278bb3da236c2 vaultA=qatioticpwu2-vault0 vaultB=qatioticpScu-vault0 subject=AASRETeam topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpqat02ScuRgAccountManagement/providers/Microsoft.KeyVault/vaults/qatioticpScu-vault0 raw={"Id": "https://qatioticpscu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2", "VaultName": "qatioticpScu-vault0", "ObjectType": "Secret", "ObjectName": "AASRETeam", "Version": "a367249d06ae48109ba278bb3da236c2", "NBF": null, "EXP": null}
-2025-11-16T04:34:18.826 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2?api-version=REDACTED'
+2025-11-16T05:08:27.395 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T05:08:27.3949117+00:00', Id=32eb8750-3325-449b-a86e-fef612d5476d)
+2025-11-16T05:08:27.402 [Information] [EVENT] type=Microsoft.KeyVault.SecretNewVersionCreated vault=qatioticpwu2-vault0 name=AIOTSRE version=8d5e97e5009547119ab9f1c8f3b35be8
+2025-11-16T05:08:27.402 [Information] AppServiceCredential.get_token_info succeeded
+2025-11-16T05:08:27.402 [Information] ManagedIdentityCredential.get_token_info succeeded
+2025-11-16T05:08:27.402 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AIOTSRE/8d5e97e5009547119ab9f1c8f3b35be8?api-version=REDACTED'
 Request method: 'GET'
 Request headers:
     'Accept': 'application/json'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:19.147 [Information] Response status: 401
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '946b4830-c8fb-41ed-80ef-ac53da9f60d8'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
-    'Date': 'Sun, 16 Nov 2025 04:34:18 GMT'
-    'Content-Length': '97'
-2025-11-16T04:34:19.149 [Information] Request URL: 'http://169.254.145.8:8081/msi/token?api-version=REDACTED&resource=REDACTED'
-Request method: 'GET'
-Request headers:
-    'X-IDENTITY-HEADER': 'REDACTED'
-    'Metadata': 'REDACTED'
-    'User-Agent': 'azsdk-python-identity/1.25.1 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:18.801 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T04:34:18.7928685+00:00', Id=d550c268-14a5-4070-a0ff-50f4bff80bd4)
-2025-11-16T04:34:18.825 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpScu-vault0 objType=secret objName=AASRETeam version=a367249d06ae48109ba278bb3da236c2 vaultA=qatioticpwu2-vault0 vaultB=qatioticpScu-vault0 subject=AASRETeam topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpqat02ScuRgAccountManagement/providers/Microsoft.KeyVault/vaults/qatioticpScu-vault0 raw={"Id": "https://qatioticpscu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2", "VaultName": "qatioticpScu-vault0", "ObjectType": "Secret", "ObjectName": "AASRETeam", "Version": "a367249d06ae48109ba278bb3da236c2", "NBF": null, "EXP": null}
-2025-11-16T04:34:18.826 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2?api-version=REDACTED'
-Request method: 'GET'
-Request headers:
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:19.147 [Information] Response status: 401
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '946b4830-c8fb-41ed-80ef-ac53da9f60d8'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
-    'Date': 'Sun, 16 Nov 2025 04:34:18 GMT'
-    'Content-Length': '97'
-2025-11-16T04:34:19.149 [Information] Request URL: 'http://169.254.145.8:8081/msi/token?api-version=REDACTED&resource=REDACTED'
-Request method: 'GET'
-Request headers:
-    'X-IDENTITY-HEADER': 'REDACTED'
-    'Metadata': 'REDACTED'
-    'User-Agent': 'azsdk-python-identity/1.25.1 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:19.944 [Information] Response status: 200
-Response headers:
-    'Content-Type': 'application/json; charset=utf-8'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Server': 'Kestrel'
-    'Transfer-Encoding': 'chunked'
-    'X-CORRELATION-ID': 'REDACTED'
-2025-11-16T04:34:19.947 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:19.948 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:19.948 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2?api-version=REDACTED'
-Request method: 'GET'
-Request headers:
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
+    'x-ms-client-request-id': '49087a66-c2aa-11f0-a0f3-6e6e68015750'
     'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
     'Authorization': 'REDACTED'
 No body was attached to the request
-2025-11-16T04:34:20.054 [Information] Response status: 200
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': 'e57d8415-e8bf-40ea-8400-6908cc716592'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Content-Length': '253'
-2025-11-16T04:34:20.055 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
-Request method: 'PUT'
-Request headers:
-    'Content-Type': 'application/json'
-    'Content-Length': '0'
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:20.173 [Information] Response status: 401
+2025-11-16T05:08:27.503 [Information] Response status: 200
 Response headers:
     'Cache-Control': 'no-cache'
     'Pragma': 'no-cache'
     'Content-Type': 'application/json; charset=utf-8'
     'Expires': '-1'
     'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '44be8356-d79a-4da0-b14b-d57bf1c7a917'
+    'x-ms-client-request-id': '49087a66-c2aa-11f0-a0f3-6e6e68015750'
+    'x-ms-request-id': '79c1ff0f-532a-49ae-8656-cea9f4dd02fc'
     'x-ms-keyvault-service-version': '1.9.2851.1'
     'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
     'X-Content-Type-Options': 'REDACTED'
     'Strict-Transport-Security': 'REDACTED'
-    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Content-Length': '97'
-2025-11-16T04:34:20.173 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:20.173 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:20.174 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '251'
+2025-11-16T05:08:27.504 [Information] [LOOP-GUARD] Attempt 2/3 for qatioticpwu2-vault0|qatioticpScu-vault0|AIOTSRE|8d5e97e5009547119ab9f1c8f3b35be8
+2025-11-16T05:08:27.505 [Information] AppServiceCredential.get_token_info succeeded
+2025-11-16T05:08:27.505 [Information] ManagedIdentityCredential.get_token_info succeeded
+2025-11-16T05:08:27.505 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AIOTSRE?api-version=REDACTED'
 Request method: 'PUT'
 Request headers:
     'Content-Type': 'application/json'
-    'Content-Length': '19'
+    'Content-Length': '31'
     'Accept': 'application/json'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
+    'x-ms-client-request-id': '4917fdce-c2aa-11f0-a0f3-6e6e68015750'
     'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
     'Authorization': 'REDACTED'
 A body is sent with the request
-2025-11-16T04:34:20.388 [Information] Response status: 200
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '45a69562-e7cd-4ee5-bb67-6180e8b76a16'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:20 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:20.389 [Error] Replication failed.
-Traceback (most recent call last):
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 187, in main
-    replicate_secret_with_loop_guard(src_v, tgt_v, obj_name, version)
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 256, in replicate_secret_with_loop_guard
-    props.tags = new_tags
-AttributeError: can't set attribute 'tags'
-2025-11-16T04:34:20.403 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=d550c268-14a5-4070-a0ff-50f4bff80bd4, Duration=1607ms)
-2025-11-16T04:34:22.408 [Information] ExtensionSystemOptions
-{
-  "extensionName": "eventgrid",
-  "webhookAuthorizationLevel": "System"
-}
-2025-11-16T04:34:22.410 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T04:34:22.4091556+00:00', Id=7e0e8cdd-e7be-4e3d-adbf-810d4051cace)
-2025-11-16T04:34:22.416 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=secret objName=AASRETeam version=d8e94333563942b29037258f15eb99dc vaultA=qatioticpwu2-vault0 vaultB=qatioticpScu-vault0 subject=AASRETeam topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0 raw={"Id": "https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam/d8e94333563942b29037258f15eb99dc", "VaultName": "qatioticpwu2-vault0", "ObjectType": "Secret", "ObjectName": "AASRETeam", "Version": "d8e94333563942b29037258f15eb99dc", "NBF": null, "EXP": null}
-2025-11-16T04:34:22.417 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:22.417 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:22.417 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam/d8e94333563942b29037258f15eb99dc?api-version=REDACTED'
-Request method: 'GET'
-Request headers:
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '86208290-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-    'Authorization': 'REDACTED'
-No body was attached to the request
-2025-11-16T04:34:22.574 [Information] Response status: 200
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '86208290-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '62753012-89c3-4c1a-b545-35e289024159'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:22 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:22.574 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:22.574 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:22.574 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
-Request method: 'PUT'
-Request headers:
-    'Content-Type': 'application/json'
-    'Content-Length': '19'
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '863867c0-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-    'Authorization': 'REDACTED'
-A body is sent with the request
-2025-11-16T04:34:19.944 [Information] Response status: 200
-Response headers:
-    'Content-Type': 'application/json; charset=utf-8'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Server': 'Kestrel'
-    'Transfer-Encoding': 'chunked'
-    'X-CORRELATION-ID': 'REDACTED'
-2025-11-16T04:34:19.947 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:19.948 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:19.948 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam/a367249d06ae48109ba278bb3da236c2?api-version=REDACTED'
-Request method: 'GET'
-Request headers:
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-    'Authorization': 'REDACTED'
-No body was attached to the request
-2025-11-16T04:34:20.054 [Information] Response status: 200
+2025-11-16T05:08:27.859 [Information] Response status: 200
 Response headers:
     'Cache-Control': 'no-cache'
     'Pragma': 'no-cache'
     'Content-Type': 'application/json; charset=utf-8'
     'Expires': '-1'
     'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '83fc2776-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': 'e57d8415-e8bf-40ea-8400-6908cc716592'
+    'x-ms-client-request-id': '4917fdce-c2aa-11f0-a0f3-6e6e68015750'
+    'x-ms-request-id': '85e64c85-3afa-463c-a7a7-e81c64bc63a5'
     'x-ms-keyvault-service-version': '1.9.2851.1'
     'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
     'X-Content-Type-Options': 'REDACTED'
     'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Content-Length': '253'
-2025-11-16T04:34:20.055 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
-Request method: 'PUT'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '251'
+2025-11-16T05:08:27.859 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/%3CSecretProperties%20%5Bhttps%3A%2F%2Fqatioticpscu-vault0.vault.azure.net%2Fsecrets%2FAIOTSRE%2Fd3daa773c84b4046bb07b5c4c370862e%5D%3E/?api-version=REDACTED'
+Request method: 'PATCH'
 Request headers:
     'Content-Type': 'application/json'
-    'Content-Length': '0'
+    'Content-Length': '83'
     'Accept': 'application/json'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
-No body was attached to the request
-2025-11-16T04:34:20.173 [Information] Response status: 401
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '44be8356-d79a-4da0-b14b-d57bf1c7a917'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
-    'Date': 'Sun, 16 Nov 2025 04:34:19 GMT'
-    'Content-Length': '97'
-2025-11-16T04:34:20.173 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:20.173 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:20.174 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
-Request method: 'PUT'
-Request headers:
-    'Content-Type': 'application/json'
-    'Content-Length': '19'
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
+    'x-ms-client-request-id': '494e2a84-c2aa-11f0-a0f3-6e6e68015750'
     'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
     'Authorization': 'REDACTED'
 A body is sent with the request
-2025-11-16T04:34:20.388 [Information] Response status: 200
+2025-11-16T05:08:27.927 [Information] Response status: 400
 Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '84b7fde8-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '45a69562-e7cd-4ee5-bb67-6180e8b76a16'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'Cache-Control': 'private'
+    'Content-Type': 'text/html; charset=utf-8'
     'X-Content-Type-Options': 'REDACTED'
     'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:20 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:20.389 [Error] Replication failed.
-Traceback (most recent call last):
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 187, in main
-    replicate_secret_with_loop_guard(src_v, tgt_v, obj_name, version)
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 256, in replicate_secret_with_loop_guard
-    props.tags = new_tags
-AttributeError: can't set attribute 'tags'
-2025-11-16T04:34:20.403 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=d550c268-14a5-4070-a0ff-50f4bff80bd4, Duration=1607ms)
-2025-11-16T04:34:22.960 [Information] Response status: 200
-Response headers:
-    'Cache-Control': 'no-cache'
-    'Pragma': 'no-cache'
-    'Content-Type': 'application/json; charset=utf-8'
-    'Expires': '-1'
-    'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '863867c0-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '4cc36e33-50d9-4cd0-92e0-331e6d4fbf50'
-    'x-ms-keyvault-service-version': '1.9.2851.1'
-    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
-    'X-Content-Type-Options': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:22 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:22.961 [Error] Replication failed.
-Traceback (most recent call last):
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 187, in main
-    replicate_secret_with_loop_guard(src_v, tgt_v, obj_name, version)
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 256, in replicate_secret_with_loop_guard
-    props.tags = new_tags
-AttributeError: can't set attribute 'tags'
-2025-11-16T04:34:22.963 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=7e0e8cdd-e7be-4e3d-adbf-810d4051cace, Duration=554ms)
-2025-11-16T04:34:22.410 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T04:34:22.4091556+00:00', Id=7e0e8cdd-e7be-4e3d-adbf-810d4051cace)
-2025-11-16T04:34:22.416 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpwu2-vault0 objType=secret objName=AASRETeam version=d8e94333563942b29037258f15eb99dc vaultA=qatioticpwu2-vault0 vaultB=qatioticpScu-vault0 subject=AASRETeam topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpQatWu2RgOrderportal/providers/Microsoft.KeyVault/vaults/qatioticpwu2-vault0 raw={"Id": "https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam/d8e94333563942b29037258f15eb99dc", "VaultName": "qatioticpwu2-vault0", "ObjectType": "Secret", "ObjectName": "AASRETeam", "Version": "d8e94333563942b29037258f15eb99dc", "NBF": null, "EXP": null}
-2025-11-16T04:34:22.417 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:22.417 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:22.417 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AASRETeam/d8e94333563942b29037258f15eb99dc?api-version=REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '3490'
+2025-11-16T05:08:27.930 [Error] Executed 'Functions.keyvaultsync' (Failed, Id=32eb8750-3325-449b-a86e-fef612d5476d, Duration=535ms)
+Result: Failure
+Type: 
+Exception: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Stack:   File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/dispatcher.py", line 684, in _handle__invocation_request
+    call_result = await self._loop.run_in_executor(
+  File "/usr/local/lib/python3.10/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/dispatcher.py", line 1015, in _run_sync_func
+    return ExtensionManager.get_sync_invocation_wrapper(context,
+  File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/extension.py", line 211, in _raw_invocation_wrapper
+    result = function(**args)
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 206, in main
+    replicate_secret(src, tgt, name, version)
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 170, in replicate_secret
+    tgt_client.update_secret_properties(
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_client.py", line 190, in update_secret_properties
+    bundle = self._client.update_secret(
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
+    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
+    self._json = loads(self.text())
+  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+2025-11-16T05:08:27.395 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T05:08:27.3949117+00:00', Id=32eb8750-3325-449b-a86e-fef612d5476d)
+2025-11-16T05:08:27.402 [Information] [EVENT] type=Microsoft.KeyVault.SecretNewVersionCreated vault=qatioticpwu2-vault0 name=AIOTSRE version=8d5e97e5009547119ab9f1c8f3b35be8
+2025-11-16T05:08:27.402 [Information] AppServiceCredential.get_token_info succeeded
+2025-11-16T05:08:27.402 [Information] ManagedIdentityCredential.get_token_info succeeded
+2025-11-16T05:08:27.402 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/AIOTSRE/8d5e97e5009547119ab9f1c8f3b35be8?api-version=REDACTED'
 Request method: 'GET'
 Request headers:
     'Accept': 'application/json'
-    'x-ms-client-request-id': '86208290-c2a5-11f0-8a18-3e1c66089e88'
+    'x-ms-client-request-id': '49087a66-c2aa-11f0-a0f3-6e6e68015750'
     'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
     'Authorization': 'REDACTED'
 No body was attached to the request
-2025-11-16T04:34:22.574 [Information] Response status: 200
+2025-11-16T05:08:27.503 [Information] Response status: 200
 Response headers:
     'Cache-Control': 'no-cache'
     'Pragma': 'no-cache'
     'Content-Type': 'application/json; charset=utf-8'
     'Expires': '-1'
     'x-ms-keyvault-region': 'westus2'
-    'x-ms-client-request-id': '86208290-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '62753012-89c3-4c1a-b545-35e289024159'
+    'x-ms-client-request-id': '49087a66-c2aa-11f0-a0f3-6e6e68015750'
+    'x-ms-request-id': '79c1ff0f-532a-49ae-8656-cea9f4dd02fc'
     'x-ms-keyvault-service-version': '1.9.2851.1'
     'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
     'X-Content-Type-Options': 'REDACTED'
     'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:22 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:22.574 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:22.574 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:22.574 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam?api-version=REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '251'
+2025-11-16T05:08:27.504 [Information] [LOOP-GUARD] Attempt 2/3 for qatioticpwu2-vault0|qatioticpScu-vault0|AIOTSRE|8d5e97e5009547119ab9f1c8f3b35be8
+2025-11-16T05:08:27.505 [Information] AppServiceCredential.get_token_info succeeded
+2025-11-16T05:08:27.505 [Information] ManagedIdentityCredential.get_token_info succeeded
+2025-11-16T05:08:27.505 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AIOTSRE?api-version=REDACTED'
 Request method: 'PUT'
 Request headers:
     'Content-Type': 'application/json'
-    'Content-Length': '19'
+    'Content-Length': '31'
     'Accept': 'application/json'
-    'x-ms-client-request-id': '863867c0-c2a5-11f0-8a18-3e1c66089e88'
+    'x-ms-client-request-id': '4917fdce-c2aa-11f0-a0f3-6e6e68015750'
     'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
     'Authorization': 'REDACTED'
 A body is sent with the request
-2025-11-16T04:34:22.960 [Information] Response status: 200
+2025-11-16T05:08:27.859 [Information] Response status: 200
 Response headers:
     'Cache-Control': 'no-cache'
     'Pragma': 'no-cache'
     'Content-Type': 'application/json; charset=utf-8'
     'Expires': '-1'
     'x-ms-keyvault-region': 'South Central US'
-    'x-ms-client-request-id': '863867c0-c2a5-11f0-8a18-3e1c66089e88'
-    'x-ms-request-id': '4cc36e33-50d9-4cd0-92e0-331e6d4fbf50'
+    'x-ms-client-request-id': '4917fdce-c2aa-11f0-a0f3-6e6e68015750'
+    'x-ms-request-id': '85e64c85-3afa-463c-a7a7-e81c64bc63a5'
     'x-ms-keyvault-service-version': '1.9.2851.1'
     'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
     'X-Content-Type-Options': 'REDACTED'
     'Strict-Transport-Security': 'REDACTED'
-    'Date': 'Sun, 16 Nov 2025 04:34:22 GMT'
-    'Content-Length': '243'
-2025-11-16T04:34:22.961 [Error] Replication failed.
-Traceback (most recent call last):
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 187, in main
-    replicate_secret_with_loop_guard(src_v, tgt_v, obj_name, version)
-  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 256, in replicate_secret_with_loop_guard
-    props.tags = new_tags
-AttributeError: can't set attribute 'tags'
-2025-11-16T04:34:22.963 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=7e0e8cdd-e7be-4e3d-adbf-810d4051cace, Duration=554ms)
-2025-11-16T04:34:25.837 [Information] ExtensionSystemOptions
-{
-  "extensionName": "eventgrid",
-  "webhookAuthorizationLevel": "System"
-}
-2025-11-16T04:34:25.838 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T04:34:25.8381572+00:00', Id=44a74948-41dd-4af5-8694-2f9b23ad1f8f)
-2025-11-16T04:34:25.845 [Information] KV Replicator triggered. type=Microsoft.KeyVault.SecretNewVersionCreated src=qatioticpScu-vault0 objType=secret objName=AASRETeam version=9799957dd2cb4dd7b279d6e87d808ca6 vaultA=qatioticpwu2-vault0 vaultB=qatioticpScu-vault0 subject=AASRETeam topic=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourceGroups/iotIcpqat02ScuRgAccountManagement/providers/Microsoft.KeyVault/vaults/qatioticpScu-vault0 raw={"Id": "https://qatioticpscu-vault0.vault.azure.net/secrets/AASRETeam/9799957dd2cb4dd7b279d6e87d808ca6", "VaultName": "qatioticpScu-vault0", "ObjectType": "Secret", "ObjectName": "AASRETeam", "Version": "9799957dd2cb4dd7b279d6e87d808ca6", "NBF": null, "EXP": null}
-2025-11-16T04:34:25.846 [Information] AppServiceCredential.get_token_info succeeded
-2025-11-16T04:34:25.846 [Information] ManagedIdentityCredential.get_token_info succeeded
-2025-11-16T04:34:25.846 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/AASRETeam/9799957dd2cb4dd7b279d6e87d808ca6?api-version=REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '251'
+2025-11-16T05:08:27.859 [Information] Request URL: 'https://qatioticpScu-vault0.vault.azure.net/secrets/%3CSecretProperties%20%5Bhttps%3A%2F%2Fqatioticpscu-vault0.vault.azure.net%2Fsecrets%2FAIOTSRE%2Fd3daa773c84b4046bb07b5c4c370862e%5D%3E/?api-version=REDACTED'
+Request method: 'PATCH'
+Request headers:
+    'Content-Type': 'application/json'
+    'Content-Length': '83'
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '494e2a84-c2aa-11f0-a0f3-6e6e68015750'
+    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+    'Authorization': 'REDACTED'
+A body is sent with the request
+2025-11-16T05:08:27.927 [Information] Response status: 400
+Response headers:
+    'Cache-Control': 'private'
+    'Content-Type': 'text/html; charset=utf-8'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:08:27 GMT'
+    'Content-Length': '3490'
+2025-11-16T05:08:27.931 [Error] Executed 'Functions.keyvaultsync' (Failed, Id=32eb8750-3325-449b-a86e-fef612d5476d, Duration=535ms)
+Result: Failure
+Type: 
+Exception: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Stack:   File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/dispatcher.py", line 684, in _handle__invocation_request
+    call_result = await self._loop.run_in_executor(
+  File "/usr/local/lib/python3.10/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/dispatcher.py", line 1015, in _run_sync_func
+    return ExtensionManager.get_sync_invocation_wrapper(context,
+  File "/azure-functions-host/workers/python/3.10/LINUX/X64/azure_functions_worker/extension.py", line 211, in _raw_invocation_wrapper
+    result = function(**args)
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 206, in main
+    replicate_secret(src, tgt, name, version)
+  File "/home/site/wwwroot/keyvaultsync/__init__.py", line 170, in replicate_secret
+    tgt_client.update_secret_properties(
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_client.py", line 190, in update_secret_properties
+    bundle = self._client.update_secret(
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
+    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
+  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
+    self._json = loads(self.text())
+  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
