@@ -1,105 +1,104 @@
 import logging
-import json
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-from azure.core.exceptions import ResourceNotFoundError, HttpResponseError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 
-# ---------------------------------------------
+# ---------------------------------------------------------
 # CONSTANTS
-# ---------------------------------------------
-LOOP_TAG_FROM = "replicatedFrom"
-LOOP_TAG_BY = "replicatedBy"
-LOOP_TAG_BY_VAL = "keyvaultsync"
+# ---------------------------------------------------------
+TAG_FROM = "replicatedFrom"
+TAG_BY = "replicatedBy"
+TAG_BY_VALUE = "keyvaultsync"
 
-MAX_ATTEMPTS = 3  # safety guard
+MAX_ATTEMPTS = 3
+attempt_cache = {}  # (src,tgt,name,version) → count
 
 
-# ---------------------------------------------
+# ---------------------------------------------------------
 # HELPERS
-# ---------------------------------------------
+# ---------------------------------------------------------
 def kv_url(name: str) -> str:
     return f"https://{name}.vault.azure.net"
 
 
-def kv_name(url_or_name: str) -> str:
-    """Normalize vault name from URL or raw name."""
-    if ".vault.azure.net" in url_or_name:
-        return url_or_name.split("//")[-1].split(".")[0].lower()
-    return url_or_name.lower()
+def kv_name(raw: str) -> str:
+    """Normalize a vault name whether URL or raw."""
+    if not raw:
+        return ""
+    raw = raw.lower()
+    if ".vault.azure.net" in raw:
+        return raw.split("//")[-1].split(".")[0]
+    return raw
 
 
 def should_skip_by_tags(tags: dict, src: str, tgt: str) -> bool:
-    """Loop prevention via tags."""
+    """Primary loop prevention using tags on the SOURCE version."""
     if not tags:
         return False
 
+    tag_from = kv_name(tags.get(TAG_FROM, ""))
+    tag_by = tags.get(TAG_BY, None)
+
     src_norm = kv_name(src)
     tgt_norm = kv_name(tgt)
-    tag_from = kv_name(tags.get(LOOP_TAG_FROM, ""))
-    tag_by = tags.get(LOOP_TAG_BY)
 
-    if tag_by == LOOP_TAG_BY_VAL and tag_from == tgt_norm:
+    # If the version was created by this function and came from the opposite vault → skip
+    if tag_by == TAG_BY_VALUE and tag_from == tgt_norm:
         logging.info(
-            f"[TAG-CHECK] Loop detected. "
-            f"replicatedFrom={tag_from} replicatedBy={tag_by}. Skipping."
+            f"[LOOP-TAG] Skipping because source version already came FROM {tgt_norm}."
         )
         return True
 
     return False
 
 
-attempt_cache = {}  # (src, tgt, name, version) → attempts
-
-
-def increment_loop_attempt(src, tgt, name, version) -> bool:
-    """Loop-prevention via attempt count."""
+def increment_attempt(src, tgt, name, version):
     key = f"{src}|{tgt}|{name}|{version}"
     attempt_cache[key] = attempt_cache.get(key, 0) + 1
-    attempt = attempt_cache[key]
-    logging.info(f"[LOOP-GUARD] Attempt {attempt}/{MAX_ATTEMPTS} for {key}")
+    n = attempt_cache[key]
 
-    if attempt > MAX_ATTEMPTS:
-        logging.error(f"[LOOP-GUARD] Max attempts exceeded for {key}. Skipping.")
-        return False
-    return True
+    logging.info(f"[LOOP-GUARD] Attempt {n}/{MAX_ATTEMPTS} for {key}")
+
+    return n <= MAX_ATTEMPTS
 
 
-# ---------------------------------------------
-# SECRET REPLICATION WITH TAGS
-# ---------------------------------------------
+# ---------------------------------------------------------
+# REPLICATION LOGIC (SAFE)
+# ---------------------------------------------------------
 def replicate_secret(src: str, tgt: str, name: str, version: str, cred):
     src_client = SecretClient(kv_url(src), cred)
     tgt_client = SecretClient(kv_url(tgt), cred)
 
-    # 1. Read source secret
+    # 1. Read the exact version
     try:
         sec = src_client.get_secret(name, version=version)
     except ResourceNotFoundError:
-        logging.error(f"[ERROR] Source secret not found: {name} ({version})")
+        logging.error(f"[ERROR] Source secret not found: {name}/{version}")
         return
     except HttpResponseError as ex:
-        logging.error(f"[ERROR] Failed to read source secret: {ex}")
+        logging.error(f"[ERROR] Failed reading source secret: {ex}")
         return
 
     src_tags = dict(sec.properties.tags or {})
 
-    # 2. Tag-based loop check
+    # 2. TAG LOOP CHECK
     if should_skip_by_tags(src_tags, src, tgt):
         return
 
-    # 3. Prevent infinite retries
-    if not increment_loop_attempt(src, tgt, name, version):
+    # 3. SAFETY ATTEMPT CHECK
+    if not increment_attempt(src, tgt, name, version):
+        logging.error("[LOOP-GUARD] Max attempts exceeded. Skipping replication.")
         return
 
-    # 4. Build new tags on TARGET
+    # 4. Build new tags for target version
     new_tags = dict(src_tags)
-    new_tags[LOOP_TAG_FROM] = kv_name(src)
-    new_tags[LOOP_TAG_BY] = LOOP_TAG_BY_VAL
+    new_tags[TAG_FROM] = kv_name(src)
+    new_tags[TAG_BY] = TAG_BY_VALUE
 
-    # 5. Create new version on target WITH tags in one call
+    # 5. Write to TARGET with tags in ONE operation (NO PATCH EVER!)
     try:
-        created = tgt_client.set_secret(
+        written = tgt_client.set_secret(
             name,
             sec.value,
             content_type=sec.properties.content_type,
@@ -107,54 +106,58 @@ def replicate_secret(src: str, tgt: str, name: str, version: str, cred):
         )
 
         logging.info(
-            f"[SECRET-REPLICATED] {name} {src} → {tgt} "
-            f"version={created.properties.version} "
-            f"tags={created.properties.tags}"
+            f"[REPLICATED] {name}: {src} → {tgt}, "
+            f"newVersion={written.properties.version}, tags={written.properties.tags}"
         )
 
     except HttpResponseError as ex:
-        logging.error(f"[ERROR] WRITE FAILED for {name} to {tgt}: {ex}")
+        logging.error(f"[ERROR] Failed writing secret to {tgt}: {ex}")
         return
 
 
-# ---------------------------------------------
-# MAIN ENTRY POINT
-# ---------------------------------------------
+# ---------------------------------------------------------
+# MAIN FUNCTION ENTRY
+# ---------------------------------------------------------
 def main(event: func.EventGridEvent):
     cred = DefaultAzureCredential()
 
-    # raw event data from Key Vault
     data = event.get_json()
 
-    vault = kv_name(data.get("VaultName", ""))
-    obj_type = data.get("ObjectType")
-    name = data.get("ObjectName")
-    version = data.get("Version")
+    vault_raw = data.get("VaultName", "")
+    vault = kv_name(vault_raw)
+    name = data.get("ObjectName", None)
+    version = data.get("Version", None)
+    object_type = data.get("ObjectType", "").lower()
 
-    logging.info(f"[EVENT] type={event.event_type} vault={vault} name={name} version={version}")
+    logging.info(f"[EVENT] vault={vault} name={name} version={version} type={object_type}")
 
-    if obj_type.lower() != "secret":
+    # Only process secrets
+    if object_type != "secret":
         logging.info("[SKIP] Not a secret event.")
         return
 
-    # -----------------------------------
-    # DEFINE YOUR SOURCE/TARGET VAULTS
-    # -----------------------------------
+    # ---------------------------------------------
+    # DEFINE THE TWO VAULTS THAT SHOULD SYNC
+    # ---------------------------------------------
     vaultA = "qatioticpwu2-vault0"
-    vaultB = "qatioticpScu-vault0"
+    vaultB = "qatioticpscU-vault0"
 
-    # Determine sync direction
-    if vault == kv_name(vaultA):
-        src = vaultA
-        tgt = vaultB
-    elif vault == kv_name(vaultB):
-        src = vaultB
-        tgt = vaultA
+    vA = kv_name(vaultA)
+    vB = kv_name(vaultB)
+
+    # Route event
+    if vault == vA:
+        src, tgt = vaultA, vaultB
+    elif vault == vB:
+        src, tgt = vaultB, vaultA
     else:
-        logging.info("[SKIP] Vault not part of sync pair.")
+        logging.info("[SKIP] Vault is not in sync pair.")
         return
 
-    # Execute replication
+    if not name or not version:
+        logging.error("[ERROR] Missing secret name or version in event.")
+        return
+
     replicate_secret(src, tgt, name, version, cred)
 
-    logging.info(f"[DONE] Processed {name} version={version}")
+    logging.info("[DONE] Event processed.")
