@@ -1,44 +1,127 @@
-/home/LogFiles/Application/Functions/Host/2025-11-11T22-52-29Z-423c4adcd3.log  (https://icpqatkeyvaultsync.scm.azurewebsites.net/api/vfs/LogFiles/Application/Functions/Host/2025-11-11T22-52-29Z-423c4adcd3.log)
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
-    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
-    self._json = loads(self.text())
-  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-/home/LogFiles/Application/Functions/Host/2025-11-11T22-52-34Z-0d53502f25.log  (https://icpqatkeyvaultsync.scm.azurewebsites.net/api/vfs/LogFiles/Application/Functions/Host/2025-11-11T22-52-34Z-0d53502f25.log)
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
-    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
-    self._json = loads(self.text())
-  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-/home/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-21Z-423c4adcd3.log  (https://icpqatkeyvaultsync.scm.azurewebsites.net/api/vfs/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-21Z-423c4adcd3.log)
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
-    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
-    self._json = loads(self.text())
-  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-/home/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-26Z-0d53502f25.log  (https://icpqatkeyvaultsync.scm.azurewebsites.net/api/vfs/LogFiles/Application/Functions/Function/keyvaultsync/2025-11-12T03-45-26Z-0d53502f25.log)
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/keyvault/secrets/_generated/_operations/_operations.py", line 745, in update_secret
-    error = _failsafe_deserialize(_models.KeyVaultError, response.json())
-  File "/home/site/wwwroot/.python_packages/lib/site-packages/azure/core/rest/_http_response_impl.py", line 331, in json
-    self._json = loads(self.text())
-  File "/usr/local/lib/python3.10/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/usr/local/lib/python3.10/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/local/lib/python3.10/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
+    'Content-Length': '312'
+2025-11-16T05:59:42.084 [Information] [REPLICATED] 246: qatioticpscu-vault0 â†’ qatioticpwu2-vault0, newVersion=d1cfdde18ece4edda3aba7e3ad1512ab, tags={'replicatedFrom': 'qatioticpscu-vault0', 'replicatedBy': 'keyvaultsync'}
+2025-11-16T05:59:42.084 [Information] [DONE] Event processed.
+2025-11-16T05:59:42.086 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=5dc120ad-8399-40a4-ace2-82347a4862b0, Duration=638ms)
+2025-11-16T05:59:42.284 [Information] Executing 'Functions.keyvaultsync' (Reason='EventGrid trigger fired at 2025-11-16T05:59:42.2755013+00:00', Id=ff9af08e-e222-4987-8c78-b9cc9456226b)
+2025-11-16T05:59:42.306 [Information] No environment configuration found.
+2025-11-16T05:59:42.502 [Information] ManagedIdentityCredential will use App Service managed identity
+2025-11-16T05:59:42.503 [Information] [EVENT] vault=qatioticpwu2-vault0 name=246 version=d1cfdde18ece4edda3aba7e3ad1512ab type=secret
+2025-11-16T05:59:42.503 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/246/d1cfdde18ece4edda3aba7e3ad1512ab?api-version=REDACTED'
+Request method: 'GET'
+Request headers:
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+No body was attached to the request
+2025-11-16T05:59:42.665 [Information] Response status: 401
+Response headers:
+    'Cache-Control': 'no-cache'
+    'Pragma': 'no-cache'
+    'Content-Type': 'application/json; charset=utf-8'
+    'Expires': '-1'
+    'x-ms-keyvault-region': 'westus2'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'x-ms-request-id': 'e48515fe-af72-4502-9c55-86632a4b6de1'
+    'x-ms-keyvault-service-version': '1.9.2851.1'
+    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
+    'Date': 'Sun, 16 Nov 2025 05:59:42 GMT'
+    'Content-Length': '97'
+2025-11-16T05:59:42.666 [Information] Request URL: 'http://169.254.145.5:8081/msi/token?api-version=REDACTED&resource=REDACTED'
+Request method: 'GET'
+Request headers:
+    'X-IDENTITY-HEADER': 'REDACTED'
+    'Metadata': 'REDACTED'
+    'User-Agent': 'azsdk-python-identity/1.25.1 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+No body was attached to the request
+2025-11-16T05:59:42.665 [Information] Response status: 401
+Response headers:
+    'Cache-Control': 'no-cache'
+    'Pragma': 'no-cache'
+    'Content-Type': 'application/json; charset=utf-8'
+    'Expires': '-1'
+    'x-ms-keyvault-region': 'westus2'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'x-ms-request-id': 'e48515fe-af72-4502-9c55-86632a4b6de1'
+    'x-ms-keyvault-service-version': '1.9.2851.1'
+    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'WWW-Authenticate': 'Bearer authorization="https://login.microsoftonline.com/be0f980b-dd99-4b19-bd7b-bc71a09b026c", resource="https://vault.azure.net"'
+    'Date': 'Sun, 16 Nov 2025 05:59:42 GMT'
+    'Content-Length': '97'
+2025-11-16T05:59:42.666 [Information] Request URL: 'http://169.254.145.5:8081/msi/token?api-version=REDACTED&resource=REDACTED'
+Request method: 'GET'
+Request headers:
+    'X-IDENTITY-HEADER': 'REDACTED'
+    'Metadata': 'REDACTED'
+    'User-Agent': 'azsdk-python-identity/1.25.1 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+No body was attached to the request
+2025-11-16T05:59:43.441 [Information] Response status: 200
+Response headers:
+    'Content-Type': 'application/json; charset=utf-8'
+    'Date': 'Sun, 16 Nov 2025 05:59:42 GMT'
+    'Server': 'Kestrel'
+    'Transfer-Encoding': 'chunked'
+    'X-CORRELATION-ID': 'REDACTED'
+2025-11-16T05:59:43.445 [Information] DefaultAzureCredential acquired a token from ManagedIdentityCredential
+2025-11-16T05:59:43.445 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/246/d1cfdde18ece4edda3aba7e3ad1512ab?api-version=REDACTED'
+Request method: 'GET'
+Request headers:
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+2025-11-16T05:59:43.500 [Information] Response status: 200
+Response headers:
+    'Cache-Control': 'no-cache'
+    'Pragma': 'no-cache'
+    'Content-Type': 'application/json; charset=utf-8'
+    'Expires': '-1'
+    'x-ms-keyvault-region': 'westus2'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'x-ms-request-id': '9c19dc36-6df3-40cc-a6a2-c168c86cf560'
+    'x-ms-keyvault-service-version': '1.9.2851.1'
+    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:59:43 GMT'
+    'Content-Length': '312'
+2025-11-16T05:59:43.501 [Information] [LOOP-TAG] Skipping: source version already came FROM qatioticpscu-vault0.
+2025-11-16T05:59:43.501 [Information] [DONE] Event processed.
+2025-11-16T05:59:43.513 [Information] Executed 'Functions.keyvaultsync' (Succeeded, Id=ff9af08e-e222-4987-8c78-b9cc9456226b, Duration=1235ms)
+2025-11-16T05:59:43.441 [Information] Response status: 200
+Response headers:
+    'Content-Type': 'application/json; charset=utf-8'
+    'Date': 'Sun, 16 Nov 2025 05:59:42 GMT'
+    'Server': 'Kestrel'
+    'Transfer-Encoding': 'chunked'
+    'X-CORRELATION-ID': 'REDACTED'
+2025-11-16T05:59:43.445 [Information] DefaultAzureCredential acquired a token from ManagedIdentityCredential
+2025-11-16T05:59:43.445 [Information] Request URL: 'https://qatioticpwu2-vault0.vault.azure.net/secrets/246/d1cfdde18ece4edda3aba7e3ad1512ab?api-version=REDACTED'
+Request method: 'GET'
+Request headers:
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'User-Agent': 'azsdk-python-keyvault-secrets/4.10.0 Python/3.10.18 (Linux-6.6.104.2-1.azl3-x86_64-with-glibc2.31)'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+2025-11-16T05:59:43.500 [Information] Response status: 200
+Response headers:
+    'Cache-Control': 'no-cache'
+    'Pragma': 'no-cache'
+    'Content-Type': 'application/json; charset=utf-8'
+    'Expires': '-1'
+    'x-ms-keyvault-region': 'westus2'
+    'x-ms-client-request-id': '71efc752-c2b1-11f0-8b4b-fe9cae6bb78d'
+    'x-ms-request-id': '9c19dc36-6df3-40cc-a6a2-c168c86cf560'
+    'x-ms-keyvault-service-version': '1.9.2851.1'
+    'x-ms-keyvault-network-info': 'conn_type=Subnet;subnet=/subscriptions/335dfaa9-63ae-4034-a4b8-dcf436637d2d/resourcegroups/iotnpeappntwwu2rg/providers/microsoft.network/virtualnetworks/iotnpeappwu2vnet/subnets/iotqatappwu2pvtsubnetvnetintegration;addr=0.0.0.0;act_addr_fam=InterNetworkV6;'
+    'X-Content-Type-Options': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'Date': 'Sun, 16 Nov 2025 05:59:43 GMT'
+    'Content-Length': '312'
+2025-11-16T05:59:43.501 [Information] [LOOP-TAG] Skipping: source version already came FROM qatioticpscu-vault0.
