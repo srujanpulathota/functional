@@ -2,22 +2,30 @@ import os
 import re
 import json
 import logging
-import azure.functions as func
-
 from typing import Optional, Tuple
+
+import azure.functions as func
 from azure.identity import ManagedIdentityCredential
 from azure.keyvault.secrets import SecretClient
 from azure.keyvault.keys import KeyClient, KeyType
 from azure.keyvault.certificates import CertificateClient
 
 
-# Identity (supports UAMI or system-assigned)
+# =========================================================
+# Identity (supports system-assigned or user-assigned MI)
+# =========================================================
+# If you use a User-Assigned MI, set AZURE_CLIENT_ID in app settings.
 cred = ManagedIdentityCredential()
 
 
-# ---------- Helpers: KV name/URL normalization ----------
+# =========================================================
+# Helper: KV name/URL normalization
+# =========================================================
 def kv_name_from_any(vault: Optional[str]) -> Optional[str]:
-    """Accepts 'kv-name' or 'https://kv-name.vault.azure.net' and returns 'kv-name'."""
+    """
+    Accepts 'kv-name' or 'https://kv-name.vault.azure.net'
+    and returns 'kv-name'.
+    """
     if not vault:
         return vault
     if vault.startswith("https://"):
@@ -30,10 +38,9 @@ def kv_url(vault_name: str) -> str:
     return f"https://{name}.vault.azure.net"
 
 
-# ---------- Regex for resource paths ----------
-# Matches:
-#   /subscriptions/.../vaults/<vault>/<kind>/<name>/<version>
-#   https://<vault>.vault.azure.net/<kind>/<name>/<version?>
+# =========================================================
+# Regex for KV resource paths (for various schemas)
+# =========================================================
 RES_PATH = re.compile(
     r"(?:/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.KeyVault/vaults/([^/]+)"
     r"|https://([^.]+)\.vault\.azure\.net)"
@@ -42,7 +49,9 @@ RES_PATH = re.compile(
 )
 
 def _try_parse_any_path(s: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
-    """Return (vault, kind, name, version) from any KV-like path/URL string."""
+    """
+    Return (vault, kind, name, version) from any KV-like path/URL string.
+    """
     if not s:
         return None, None, None, None
     m = RES_PATH.search(s)
@@ -55,11 +64,13 @@ def _try_parse_any_path(s: Optional[str]) -> Tuple[Optional[str], Optional[str],
     return kv_name_from_any(vault), kind, name, ver
 
 
-# ---------- Parse Event Grid event (case-insensitive) ----------
+# =========================================================
+# Event parsing (case-insensitive data keys; robust)
+# =========================================================
 def parse_event_fields(evt: func.EventGridEvent):
     """
-    Returns (event_type, vault_name, object_kind, object_name, version, raw_lower_dict).
-    Accepts both classic and capitalized KV schemas. Pulls from data, id/url fields, subject, topic.
+    Returns (event_type, vault_name, object_kind, object_name, version, raw_data_dict).
+    Handles both classic and capitalized KV schemas.
     """
     etype = evt.event_type or ""
     topic = getattr(evt, "topic", None)
@@ -71,14 +82,14 @@ def parse_event_fields(evt: func.EventGridEvent):
     except Exception:
         pass
 
-    # Lowercase the keys for case-insensitive lookups (but keep original in logs)
+    # Make a case-insensitive view of data keys
     data = {}
     try:
-        data = { (k or ""): v for k, v in raw.items() }  # original
-        lower = { (k or "").lower(): v for k, v in raw.items() }  # case-insensitive view
+        data = { (k or ""): v for k, v in raw.items() }
+        lower = { (k or "").lower(): v for k, v in raw.items() }
     except Exception:
-        lower = {}
         data = {}
+        lower = {}
 
     # 1) Direct fields (case-insensitive)
     vault = lower.get("vaultname") or lower.get("vaulturi") or lower.get("vaulturl")
@@ -103,7 +114,7 @@ def parse_event_fields(evt: func.EventGridEvent):
         if vault and name:
             break
 
-    # 3) Subject
+    # 3) Subject (may be full path or partial)
     v3, k3, n3, ver3 = _try_parse_any_path(subject)
     vault = vault or v3
     kind  = kind  or k3
@@ -116,20 +127,28 @@ def parse_event_fields(evt: func.EventGridEvent):
         if m:
             vault = m.group(1)
 
-    # Normalize vault name if URL
+    # Normalize vault name if needed
     vault = kv_name_from_any(vault) if vault else vault
 
     return etype, vault, kind, name, ver, raw
 
 
-# ---------- Entrypoint ----------
+# =========================================================
+# Entrypoint – bi-directional sync with loop prevention
+# =========================================================
 def main(event: func.EventGridEvent):
+    # Parse all event fields robustly
     etype, src_vault, obj_kind, obj_name, version, raw = parse_event_fields(event)
 
-    tgt_vault = os.environ.get("TARGET_VAULT_NAME")
-    tgt_vault_name = kv_name_from_any(tgt_vault) if tgt_vault else None
+    # Read sync pair from app settings
+    vault_a = kv_name_from_any(os.environ.get("SYNC_VAULT_A"))
+    vault_b = kv_name_from_any(os.environ.get("SYNC_VAULT_B"))
 
-    # Safe, high-signal logging (truncate raw)
+    if not (vault_a and vault_b):
+        logging.error("SYNC_VAULT_A and/or SYNC_VAULT_B not configured. Aborting.")
+        return
+
+    # Safe, high-signal logging of incoming event (no secret values)
     try:
         raw_str = json.dumps(raw)[:4000] if raw else "{}"
     except Exception:
@@ -138,91 +157,179 @@ def main(event: func.EventGridEvent):
     logging.info(
         "KV Replicator triggered. "
         f"type={etype} src={src_vault} objType={obj_kind} objName={obj_name} "
-        f"version={version} tgt={tgt_vault} subject={getattr(event,'subject',None)} "
-        f"topic={getattr(event,'topic',None)} raw={raw_str}"
+        f"version={version} vaultA={vault_a} vaultB={vault_b} "
+        f"subject={getattr(event,'subject',None)} topic={getattr(event,'topic',None)} "
+        f"raw={raw_str}"
     )
 
-    # Hard fail if we still don't have the basics (no name = nothing to copy)
-    if not (obj_name and src_vault and tgt_vault_name):
-        logging.error(
-            "Missing required fields after fallback. "
-            f"objectName={obj_name}, src={src_vault}, tgt={tgt_vault}, ver={version}"
-        )
+    # If we don't know which vault this is, we can't route it
+    if not src_vault:
+        logging.error("Source vault could not be determined from event. Skipping.")
         return
 
+    # Decide direction dynamically (bi-directional pair)
+    src_v = kv_name_from_any(src_vault)
+    if src_v == vault_a:
+        tgt_v = vault_b
+    elif src_v == vault_b:
+        tgt_v = vault_a
+    else:
+        logging.info(f"Vault '{src_v}' is not in configured sync pair; ignoring event.")
+        return
+
+    if not obj_name:
+        logging.error(f"No objectName resolved from event. src={src_v} tgt={tgt_v}")
+        return
+
+    # Dispatch based on type; if version missing, we handle latest in the replication functions
     try:
-        # If version is missing, we'll read latest
         if etype.endswith("SecretNewVersionCreated") or (obj_kind == "secrets"):
-            replicate_secret(src_vault, tgt_vault_name, obj_name, version)
+            replicate_secret_with_loop_guard(src_v, tgt_v, obj_name, version)
         elif etype.endswith("KeyNewVersionCreated") or (obj_kind == "keys"):
-            replicate_key_metadata(src_vault, tgt_vault_name, obj_name, version)
+            replicate_key_with_loop_guard(src_v, tgt_v, obj_name, version)
         elif etype.endswith("CertificateNewVersionCreated") or (obj_kind == "certificates"):
-            replicate_certificate_public(src_vault, tgt_vault_name, obj_name, version)
+            replicate_certificate_with_loop_guard(src_v, tgt_v, obj_name, version)
         else:
             logging.info(f"Ignored event type: {etype}")
     except Exception:
         logging.exception("Replication failed.")
 
 
-# ---------- Replication routines ----------
-def replicate_secret(src: str, tgt: str, name: str, version: Optional[str]):
+# =========================================================
+# Replication routines with loop prevention via tags
+# =========================================================
+
+LOOP_TAG_FROM = "replicatedFrom"
+LOOP_TAG_BY   = "replicatedBy"
+LOOP_TAG_BY_VAL = "keyvaultsync"
+
+
+def _should_skip_replication(tags: Optional[dict], src: str, tgt: str) -> bool:
+    """
+    Decide if we should skip replication to avoid loops.
+    We skip if:
+      - The current version is clearly marked as created by this sync
+        from the counterpart vault.
+    """
+    if not tags:
+        return False
+
+    src_norm = kv_name_from_any(src)
+    tgt_norm = kv_name_from_any(tgt)
+    tag_from = kv_name_from_any(tags.get(LOOP_TAG_FROM))
+    tag_by   = tags.get(LOOP_TAG_BY)
+
+    if tag_by == LOOP_TAG_BY_VAL and tag_from == tgt_norm:
+        # This version is marked as having been created by our sync
+        # from the target vault → don't send it back and create a loop.
+        logging.info(
+            f"Skipping replication for object marked as replicatedFrom={tag_from}, "
+            f"replicatedBy={tag_by} (src={src_norm}, tgt={tgt_norm})."
+        )
+        return True
+
+    return False
+
+
+def replicate_secret_with_loop_guard(src: str, tgt: str, name: str, version: Optional[str]):
     src_client = SecretClient(kv_url(src), cred)
     tgt_client = SecretClient(kv_url(tgt), cred)
 
-    # Read latest if version absent
+    # Read source (latest if version is missing)
     secret = src_client.get_secret(name, version=version) if version else src_client.get_secret(name)
+    src_tags = dict(secret.properties.tags or {})
+
+    # Loop-prevention check (on the source version)
+    if _should_skip_replication(src_tags, src, tgt):
+        return
+
+    # Actually write to target
     set_resp = tgt_client.set_secret(name, secret.value, content_type=secret.properties.content_type)
 
-    # Copy tags
-    if secret.properties.tags:
-        props = tgt_client.get_secret(name).properties
-        props.tags = secret.properties.tags
-        tgt_client.update_secret_properties(props)
+    # Merge tags: copy user tags + loop metadata
+    new_tags = dict(src_tags)  # start from source tags
+    new_tags[LOOP_TAG_FROM] = kv_name_from_any(src)
+    new_tags[LOOP_TAG_BY]   = LOOP_TAG_BY_VAL
 
-    logging.info(f"[Secret] {name} → replicated to '{tgt}'. Target version={set_resp.properties.version}")
+    # Apply tags to the new target version
+    props = set_resp.properties
+    props.tags = new_tags
+    tgt_client.update_secret_properties(props)
+
+    logging.info(f"[Secret] {name} → replicated {src} -> {tgt}. Target version={set_resp.properties.version}")
 
 
-def replicate_key_metadata(src: str, tgt: str, name: str, version: Optional[str]):
+def replicate_key_with_loop_guard(src: str, tgt: str, name: str, version: Optional[str]):
     src_client = KeyClient(kv_url(src), cred)
     tgt_client = KeyClient(kv_url(tgt), cred)
 
     key = src_client.get_key(name, version=version) if version else src_client.get_key(name)
     kty = key.key_type
     ops = key.key_operations
+    src_tags = dict(key.properties.tags or {})
 
+    # Loop-prevention check
+    if _should_skip_replication(src_tags, src, tgt):
+        return
+
+    # Create comparable key on target (no private material export)
+    created = None
     if kty in (KeyType.rsa, KeyType.rsa_hsm):
         size = getattr(key.key, "size", None) or 2048
-        tgt_client.create_rsa_key(name=name, size=size, hardware_protected=False, key_operations=ops)
+        created = tgt_client.create_rsa_key(
+            name=name,
+            size=size,
+            hardware_protected=False,
+            key_operations=ops,
+        )
     elif kty in (KeyType.ec, KeyType.ec_hsm):
         curve = getattr(key.key, "crv", None) or "P-256"
-        tgt_client.create_ec_key(name=name, curve=curve, hardware_protected=False, key_operations=ops)
+        created = tgt_client.create_ec_key(
+            name=name,
+            curve=curve,
+            hardware_protected=False,
+            key_operations=ops,
+        )
     else:
         logging.warning(f"[Key] Type {kty} not auto-handled. Skipping {name}.")
         return
 
-    if key.properties.tags:
+    # Apply tags (user + loop metadata)
+    if created:
+        new_tags = dict(src_tags)
+        new_tags[LOOP_TAG_FROM] = kv_name_from_any(src)
+        new_tags[LOOP_TAG_BY]   = LOOP_TAG_BY_VAL
+
         props = tgt_client.get_key(name).properties
-        props.tags = key.properties.tags
+        props.tags = new_tags
         tgt_client.update_key_properties(props)
 
-    logging.info(f"[Key] {name} → created comparable key on target '{tgt}' (material not copied).")
+    logging.info(f"[Key] {name} → replicated {src} -> {tgt} (comparable key, no material copy).")
 
 
-def replicate_certificate_public(src: str, tgt: str, name: str, version: Optional[str]):
+def replicate_certificate_with_loop_guard(src: str, tgt: str, name: str, version: Optional[str]):
     src_client = CertificateClient(kv_url(src), cred)
     tgt_client = CertificateClient(kv_url(tgt), cred)
 
     cert = (
         src_client.get_certificate_version(name, version)
         if version
-        else src_client.get_certificate(name)  # latest
+        else src_client.get_certificate(name)
     )
+    src_tags = dict(cert.properties.tags or {})
 
-    tgt_client.import_certificate(name=name, certificate_bytes=cert.cer)
+    if _should_skip_replication(src_tags, src, tgt):
+        return
 
-    if cert.properties.tags:
-        props = tgt_client.get_certificate(name).properties
-        props.tags = cert.properties.tags
-        tgt_client.update_certificate_properties(props)
+    # Import only public certificate (private key not exported by Key Vault)
+    imported = tgt_client.import_certificate(name=name, certificate_bytes=cert.cer)
 
-    logging.info(f"[Cert] {name} → public certificate replicated to '{tgt}'.")
+    new_tags = dict(src_tags)
+    new_tags[LOOP_TAG_FROM] = kv_name_from_any(src)
+    new_tags[LOOP_TAG_BY]   = LOOP_TAG_BY_VAL
+
+    props = imported.properties
+    props.tags = new_tags
+    tgt_client.update_certificate_properties(props)
+
+    logging.info(f"[Cert] {name} → public cert replicated {src} -> {tgt}.")
