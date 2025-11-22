@@ -1,0 +1,8 @@
+AppService    : Icpdev-et-order-integrator-api-v1
+Resource Group: ioticpdevwu2rgordermanagement
+===============================
+  Pulling YAML endpoints from GitLab: tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/orderIntegrator-dev.yml (branch: master)
+  Using PAT from CI/CD variable 'GITLAB_ACCESS_TOKEN' (header: PRIVATE-TOKEN)
+❌ Failed to resolve endpoints for 'Icpdev-et-order-integrator-api-v1': Failed to resolve GitLab project 'tmobile/emergingtechnology/iot-devops-sre/spring-config-repository': Response status code does not indicate success: 404 (Not Found).
+Connectivity report generated at: connectivity_report.csv
+❌ One or more endpoints failed connectivity checks.
