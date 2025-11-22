@@ -1,23 +1,116 @@
-traces
-| where timestamp > ago(24h)
-| where message has "[REPLICATED]"
-| extend SecretName = extract(@"REPLICATED] ([^:]+):", 1, message)
-| extend NewVersion = extract(@"newVersion=([0-9a-fA-F-]+)", 1, message)
-| summarize ReplicatedCount = count() by SecretName, NewVersion
-| where ReplicatedCount > 1
-| order by ReplicatedCount desc
-
-traces
-| where timestamp > ago(2h)
-| where message has "[REPLICATED]" or message has "[LOOP-TAG]"
-| extend SecretName = extract(@"REPLICATED] ([^:]+):", 1, message)
-| extend NewVersion = extract(@"newVersion=([0-9a-fA-F-]+)", 1, message)
-| extend IsReplicated = message has "[REPLICATED]"
-| extend IsLoopSkip  = message has "[LOOP-TAG]"
-| summarize 
-    ReplicatedCount = countif(IsReplicated),
-    LoopSkipCount   = countif(IsLoopSkip)
-  by SecretName, NewVersion
-| order by timestamp desc
+[CmdLetBinding()]
+Param (
+    [Parameter (Mandatory = $true)]
+    [String] $SubscriptionName,
+    [Parameter (Mandatory = $true)]
+    [String] $ParameterFilePath
+)
 
 
+# Install and import Az module
+Install-Module -Name Az -Scope CurrentUser -Force -AllowClobber
+Import-Module -Name Az -Force
+Install-Module -name az -Scope CurrentUser -Force
+Import-Module -name az -Global -Force
+
+
+# Login using SPN credentials
+if ($SubscriptionName -eq 'Azure.IOTNPE') {
+    $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD
+    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID
+}
+elseif ($SubscriptionName -eq 'Azure.IOTPROD') {
+    $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD_PROD
+    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID_PROD
+}
+
+$tenantId = $env:AZ_SERVICE_PRINCIPAL_TENANT
+$SecuredPassword = ConvertTo-SecureString -String $spnKey -AsPlainText -Force
+$Credential = New-Object System.Management.Automation.PSCredential($spnId, $SecuredPassword)
+
+
+Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $Credential
+Select-AzSubscription -SubscriptionName $SubscriptionName
+
+# Load parameter file
+$appServices = Get-Content -Path $ParameterFilePath | ConvertFrom-Json -Depth 100
+$reportPath = "connectivity_report.csv"
+# Ensure TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$results = @()
+
+foreach ($appService in $appServices.appServices) {
+    $appName       = $appService.name
+    $resourceGroup = $appService.resourceGroup
+    $endpoints     = $appService.endpoints
+
+    # Get publishing credentials for Kudu API
+    $publishingProfile = Get-AzWebAppPublishingProfile -Name $appName -ResourceGroupName $resourceGroup -OutputFile null
+    $xml      = [xml]$publishingProfile
+    $userName = $xml.publishData.publishProfile[0].userName
+    $password = $xml.publishData.publishProfile[0].userPWD
+
+    # Prepare Basic Auth header
+    $pair         = "${userName}:${password}"
+    $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
+    $headers      = @{
+        Authorization = "Basic $encodedCreds"
+        Accept        = "application/json"
+    }
+
+    $kuduUrl = "https://$appName.scm.azurewebsites.net/api/command?waitForExit=true&log=true"
+
+    foreach ($endpoint in $endpoints) {
+        $status      = "Fail"
+        $httpCode    = ""
+        $attempt     = 0
+        $maxAttempts = 3
+
+        # Log file for this endpoint
+        $safeEndpoint = ($endpoint -replace '[^a-zA-Z0-9]', '_')
+
+        while ($attempt -lt $maxAttempts) {
+            try {
+                $attempt++
+                # Command to check endpoint connectivity
+                $command = "curl -k -s -o /dev/null -w '%{http_code}' $endpoint"
+                $body    = @{ command = $command; dir = "/home" } | ConvertTo-Json
+
+                # Invoke Kudu API
+                $response = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
+
+                # Extract HTTP code cleanly from Output
+                $httpCode = ($response.Output -replace "[^0-9]", "")
+
+                # Determine status based on allowed codes
+                if ($httpCode -in @("200", "404", "401")) {
+                    $status = "Pass"
+                    Write-Host "✅ $endpoint - HTTP $httpCode - $status" -ForegroundColor Green
+                    break
+                } else {
+                    $status = "Fail"
+                    Write-Host "❌ $endpoint - HTTP $httpCode - $status" -ForegroundColor Red
+                }
+            } catch {
+                $status = "Fail"
+                Write-Host "❌ $endpoint - Error: $($_.Exception.Message)" -ForegroundColor Red
+            }
+
+            Start-Sleep -Seconds 5
+        }
+
+        # Add result to array with separate columns
+        $results += [PSCustomObject]@{
+            AppService    = $appName
+            ResourceGroup = $resourceGroup
+            Endpoint      = $endpoint
+            HTTPCode      = $httpCode
+            Status        = $status
+            Timestamp     = (Get-Date).ToString("s")
+        }
+    }
+}
+
+# Export results to CSV with separate columns
+$results | Export-Csv -Path $reportPath -NoTypeInformation
+Write-Host "`n✅ Connectivity report generated at $reportPath"
