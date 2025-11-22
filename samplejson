@@ -1,1 +1,12 @@
-
+{
+    "appServices": [
+      {
+        "name": "Icpdev-et-order-integrator-api-v1",
+        "resourceGroup": "ioticpdevwu2rgordermanagement",
+        "endpoints": [
+          "https://deepio-internal-development.t-mobile.com/development/deep/v1/events/",
+          "https://essrvc-eds-ekmes-smartencrypt-meg-api.qlab01.npe.aedge.adn-gw.t-mobile.com"
+        ]
+      }
+    ]
+  }
