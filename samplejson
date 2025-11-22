@@ -1,12 +1,19 @@
 {
-    "appServices": [
-      {
-        "name": "Icpdev-et-order-integrator-api-v1",
-        "resourceGroup": "ioticpdevwu2rgordermanagement",
-        "endpoints": [
-          "https://deepio-internal-development.t-mobile.com/development/deep/v1/events/",
-          "https://essrvc-eds-ekmes-smartencrypt-meg-api.qlab01.npe.aedge.adn-gw.t-mobile.com"
-        ]
+  "appServices": [
+    {
+      "name": "Icpdev-et-order-integrator-api-v1",
+      "resourceGroup": "ioticpdevwu2rgordermanagement",
+      "endpointSource": {
+        "gitLabBaseUrl": "https://gitlab.com",
+        "projectPath": "my-group/my-repo",
+        "branch": "main",
+        "filePath": "config/downstream-endpoints.yaml",
+        "tokenEnvVar": "GITLAB_ACCESS_TOKEN",
+        "urlDetection": {
+          "mode": "ByKey",
+          "urlKey": "url"
+        }
       }
-    ]
-  }
+    }
+  ]
+}
