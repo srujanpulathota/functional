@@ -117,37 +117,52 @@ function Get-EndpointsFromGitLab {
         [Parameter(Mandatory = $true)] [string] $ProjectPath,
         [Parameter(Mandatory = $true)] [string] $Branch,
         [Parameter(Mandatory = $true)] [string] $FilePath,
-        [Parameter(Mandatory = $true)] [string] $TokenEnvVar,
+
+        # Name of CI/CD variable that holds a PAT (e.g. GITLAB_ACCESS_TOKEN)
+        [Parameter(Mandatory = $false)] [string] $TokenEnvVar = "GITLAB_ACCESS_TOKEN",
+
         [Parameter(Mandatory = $false)] [ValidateSet("AnyHttpString", "ByKey")] [string] $DetectionMode = "AnyHttpString",
         [Parameter(Mandatory = $false)] [string] $UrlKey = "url"
     )
 
     Write-Host "  Pulling YAML endpoints from GitLab: $ProjectPath/$FilePath (branch: $Branch)" -ForegroundColor Cyan
 
-    # Load GitLab PAT
-    $token = (Get-Item -Path "Env:$TokenEnvVar" -ErrorAction SilentlyContinue).Value
-    if (-not $token) {
+    # ----------------------------------------------------------------------------------------
+    # 1) Resolve PAT from CI/CD variable (PRIVATE-TOKEN)
+    # ----------------------------------------------------------------------------------------
+    if (-not $TokenEnvVar) {
+        $TokenEnvVar = "GITLAB_ACCESS_TOKEN"
+    }
+
+    $tokenValue = (Get-Item -Path "Env:$TokenEnvVar" -ErrorAction SilentlyContinue).Value
+    if (-not $tokenValue) {
         throw "Environment variable '$TokenEnvVar' not set. Cannot authenticate to GitLab."
     }
 
-    $headers = @{ "PRIVATE-TOKEN" = $token }
+    $headers = @{ "PRIVATE-TOKEN" = $tokenValue }
+    Write-Host "  Using PAT from CI/CD variable '$TokenEnvVar' (header: PRIVATE-TOKEN)" -ForegroundColor DarkCyan
 
-    # Resolve project ID
+    # ----------------------------------------------------------------------------------------
+    # 2) Resolve project ID via projectPath
+    # ----------------------------------------------------------------------------------------
+    $projectId = $null
     $encodedProject = [System.Web.HttpUtility]::UrlEncode($ProjectPath)
     $projectApi     = "$GitLabBaseUrl/api/v4/projects/$encodedProject"
 
     try {
-        $project = Invoke-RestMethod -Uri $projectApi -Headers $headers -Method GET
+        $project   = Invoke-RestMethod -Uri $projectApi -Headers $headers -Method GET
         $projectId = $project.id
         if (-not $projectId) {
-            throw "Project ID not found in response."
+            throw "Project ID not found in GitLab response."
         }
     }
     catch {
         throw "Failed to resolve GitLab project '$ProjectPath': $($_.Exception.Message)"
     }
 
-    # Get raw YAML file content
+    # ----------------------------------------------------------------------------------------
+    # 3) Get raw YAML file content
+    # ----------------------------------------------------------------------------------------
     $encodedFile = [System.Web.HttpUtility]::UrlEncode($FilePath)
     $rawApi      = "$GitLabBaseUrl/api/v4/projects/$projectId/repository/files/$encodedFile/raw?ref=$Branch"
 
@@ -162,7 +177,9 @@ function Get-EndpointsFromGitLab {
         throw "YAML file '$FilePath' is empty."
     }
 
-    # Parse YAML
+    # ----------------------------------------------------------------------------------------
+    # 4) Parse YAML + extract endpoints
+    # ----------------------------------------------------------------------------------------
     try {
         $yamlObj = ConvertFrom-Yaml -Yaml $yamlText
     }
@@ -170,7 +187,6 @@ function Get-EndpointsFromGitLab {
         throw "Failed to parse YAML content from '$FilePath': $($_.Exception.Message)"
     }
 
-    # Discover URLs
     $urls = Get-UrlsFromYamlObject -Node $yamlObj -Mode $DetectionMode -UrlKey $UrlKey |
             Select-Object -Unique
 
@@ -197,7 +213,7 @@ $overallSuccess = $true
 foreach ($app in $config.appServices) {
 
     Write-Host "`n===============================" -ForegroundColor DarkCyan
-    Write-Host "AppService    : $($app.name)"        -ForegroundColor DarkCyan
+    Write-Host "AppService    : $($app.name)"          -ForegroundColor DarkCyan
     Write-Host "Resource Group: $($app.resourceGroup)" -ForegroundColor DarkCyan
     Write-Host "===============================" -ForegroundColor DarkCyan
 
@@ -220,6 +236,12 @@ foreach ($app in $config.appServices) {
         if ($src.urlDetection.urlKey) { $urlKey        = $src.urlDetection.urlKey }
     }
 
+    # tokenEnvVar default to GITLAB_ACCESS_TOKEN if not provided
+    $tokenEnvVar = "GITLAB_ACCESS_TOKEN"
+    if ($src.PSObject.Properties.Name -contains 'tokenEnvVar' -and $src.tokenEnvVar) {
+        $tokenEnvVar = $src.tokenEnvVar
+    }
+
     # Get endpoints from GitLab
     try {
         $endpoints = Get-EndpointsFromGitLab `
@@ -227,7 +249,7 @@ foreach ($app in $config.appServices) {
                         -ProjectPath   $src.projectPath `
                         -Branch        $src.branch `
                         -FilePath      $src.filePath `
-                        -TokenEnvVar   $src.tokenEnvVar `
+                        -TokenEnvVar   $tokenEnvVar `
                         -DetectionMode $detectionMode `
                         -UrlKey        $urlKey
     }
