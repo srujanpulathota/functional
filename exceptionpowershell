@@ -1,12 +1,7 @@
-AppService    : Icpdev-et-order-integrator-api-v1
-Resource Group: ioticpdevwu2rgordermanagement
-===============================
-  Pulling YAML endpoints from GitLab: tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/orderIntegrator-dev.yml (branch: master)
+  Pulling YAML endpoints from GitLab URL:
+    https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/blob/master/orderIntegrator-dev.yml?ref_type=heads
+  Using raw YAML URL:
+    https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/raw/master/orderIntegrator-dev.yml?ref_type=heads
   Using PAT from CI/CD variable 'GITLAB_ACCESS_TOKEN' (header: PRIVATE-TOKEN)
-❌ Failed to resolve endpoints for 'Icpdev-et-order-integrator-api-v1': Failed to resolve GitLab project 'tmobile/emergingtechnology/iot-devops-sre/spring-config-repository': Response status code does not indicate success: 404 (Not Found).
+❌ Failed to resolve endpoints for 'Icpdev-et-order-integrator-api-v1': Failed to parse YAML content from 'https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/raw/master/orderIntegrator-dev.yml?ref_type=heads': Exception calling "Load" with "1" argument(s): "While scanning a multiline plain scalar, found invalid mapping."
 Connectivity report generated at: connectivity_report.csv
-❌ One or more endpoints failed connectivity checks.
-
-
-
-https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/blob/master/orderIntegrator-dev.yml?ref_type=heads
