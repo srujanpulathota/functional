@@ -376,7 +376,8 @@ if (-not $fatalErrorOccurred -and $config) {
         # ---------------------------------------------------------------------
         # Test each endpoint via Kudu + curl
         # ---------------------------------------------------------------------
-        $passHttpCodes = @("200", "301", "302", "307", "404", "401")  # treat as "reachable"
+        # Treat these HTTP codes as "reachable" from a connectivity standpoint
+        $passHttpCodes = @("200", "301", "302", "307", "404", "401", "403")
 
         foreach ($url in $endpoints) {
             $attempt   = 0
@@ -391,21 +392,50 @@ if (-not $fatalErrorOccurred -and $config) {
                 $attempt++
 
                 try {
-                    $cmd  = "curl -k -s -o /dev/null -w '%{http_code}' $url"
+                    # Curl emits both HTTP_CODE and CURL_EXIT.
+                    # Use single-quoted PowerShell string to avoid expanding $? locally.
+                    $cmd  = 'curl -k -s -o /dev/null -w "HTTP_CODE=%{http_code}\n" ' + $url + '; echo CURL_EXIT=$?'
                     $body = @{ command = $cmd; dir = "/home" } | ConvertTo-Json
 
-                    $resp     = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
-                    $httpCode = ($resp.Output -replace "[^0-9]", "")
+                    $resp      = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
+                    $rawOutput = ($resp.Output -replace "`r","")
+                    $lines     = $rawOutput -split "`n"
 
-                    if ($httpCode -in $passHttpCodes) {
-                        $status = "Pass"
-                        Write-Host "  ✔ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Green
-                        break
+                    $httpLine  = $lines | Where-Object { $_ -like 'HTTP_CODE=*' } | Select-Object -First 1
+                    $exitLine  = $lines | Where-Object { $_ -like 'CURL_EXIT=*' } | Select-Object -First 1
+
+                    $httpCode  = if ($httpLine) { $httpLine -replace 'HTTP_CODE=','' } else { "" }
+                    $curlExit  = if ($exitLine) { $exitLine -replace 'CURL_EXIT=','' } else { $null }
+
+                    if ($null -eq $curlExit) {
+                        # Could not parse curl exit code – treat as failure and retry
+                        $status   = "Fail"
+                        $errorMsg = "Unable to parse CURL_EXIT from Kudu output. Raw: $rawOutput"
+                        Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
                     }
                     else {
-                        $status   = "Fail"
-                        $errorMsg = "Unexpected HTTP code $httpCode"
-                        Write-Host "  ✖ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Yellow
+                        $curlExitInt = [int]$curlExit
+
+                        if ($curlExitInt -eq 0) {
+                            # Connection succeeded (curl exit 0) – treat as PASS, no retry, regardless of HTTP code.
+                            $status   = "Pass"
+                            $errorMsg = "curl exit 0 (connected). HTTP_CODE=$httpCode"
+                            Write-Host "  ✔ $url : CONNECTED (curl exit 0), HTTP $httpCode (attempt $attempt, no further retries)" -ForegroundColor Green
+                            break
+                        }
+                        elseif ($httpCode -and ($httpCode -in $passHttpCodes)) {
+                            # curl exit non-zero but HTTP code is in allowed list – still treat as connectivity OK
+                            $status   = "Pass"
+                            $errorMsg = "curl exit $curlExitInt but HTTP_CODE=$httpCode is in allowed list (treated as reachable)."
+                            Write-Host "  ⚠ $url : curl exit $curlExitInt, HTTP $httpCode (treated as PASS)" -ForegroundColor DarkYellow
+                            break
+                        }
+                        else {
+                            # Real failure: non-zero curl exit and non-allowed HTTP code
+                            $status   = "Fail"
+                            $errorMsg = "curl exit $curlExitInt, HTTP_CODE=$httpCode"
+                            Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
+                        }
                     }
                 }
                 catch {
@@ -414,14 +444,19 @@ if (-not $fatalErrorOccurred -and $config) {
                     Write-Host "  ✖ $url : Exception on attempt $attempt -> $errorMsg" -ForegroundColor Red
                 }
 
-                if ($attempt -lt $max) {
+                if ($status -ne "Pass" -and $attempt -lt $max) {
                     Write-Host "  ...retrying in 5 seconds (attempt $($attempt + 1) of $max)..." -ForegroundColor DarkYellow
                     Start-Sleep -Seconds 5
+                }
+                else {
+                    # either Pass, or we've exhausted attempts
+                    break
                 }
             }
 
             if ($status -ne "Pass") {
-                $anyEndpointFailed = $true   # record failure but DO NOT fail the job
+                # Record that at least one endpoint failed (for reporting only; job still succeeds per your design)
+                $anyEndpointFailed = $true
             }
 
             $results.Add([pscustomobject]@{
