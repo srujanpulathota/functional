@@ -392,50 +392,41 @@ if (-not $fatalErrorOccurred -and $config) {
                 $attempt++
 
                 try {
-                    # Curl emits both HTTP_CODE and CURL_EXIT.
-                    # Use single-quoted PowerShell string to avoid expanding $? locally.
-                    $cmd  = 'curl -k -s -o /dev/null -w "HTTP_CODE=%{http_code}\n" ' + $url + '; echo CURL_EXIT=$?'
+                    # Use curl to emit only the HTTP code
+                    $cmd  = "curl -k -s -o /dev/null -w '%{http_code}' $url"
                     $body = @{ command = $cmd; dir = "/home" } | ConvertTo-Json
 
                     $resp      = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
-                    $rawOutput = ($resp.Output -replace "`r","")
-                    $lines     = $rawOutput -split "`n"
+                    $rawOutput = ($resp.Output -replace "`r","").Trim()
 
-                    $httpLine  = $lines | Where-Object { $_ -like 'HTTP_CODE=*' } | Select-Object -First 1
-                    $exitLine  = $lines | Where-Object { $_ -like 'CURL_EXIT=*' } | Select-Object -First 1
+                    # Extract digits from the raw output
+                    $httpCode = ($rawOutput -replace "[^0-9]", "")
 
-                    $httpCode  = if ($httpLine) { $httpLine -replace 'HTTP_CODE=','' } else { "" }
-                    $curlExit  = if ($exitLine) { $exitLine -replace 'CURL_EXIT=','' } else { $null }
-
-                    if ($null -eq $curlExit) {
-                        # Could not parse curl exit code – treat as failure and retry
+                    if ([string]::IsNullOrWhiteSpace($httpCode)) {
                         $status   = "Fail"
-                        $errorMsg = "Unable to parse CURL_EXIT from Kudu output. Raw: $rawOutput"
+                        $errorMsg = "No HTTP code parsed from curl output. Raw output: '$rawOutput'"
                         Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
                     }
+                    elseif ($httpCode -eq "000") {
+                        # Your requested behaviour:
+                        # Treat 000 as Pass and do not retry.
+                        $status   = "Pass"
+                        $errorMsg = "HTTP 000 from curl (treated as PASS per config; connectivity uncertain)."
+                        Write-Host "  ⚠ $url : HTTP 000 (treated as PASS, no retry)" -ForegroundColor DarkYellow
+                        break
+                    }
+                    elseif ($httpCode -in $passHttpCodes) {
+                        # Good connectivity; allowed HTTP status
+                        $status   = "Pass"
+                        $errorMsg = "HTTP $httpCode (treated as reachable)."
+                        Write-Host "  ✔ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Green
+                        break
+                    }
                     else {
-                        $curlExitInt = [int]$curlExit
-
-                        if ($curlExitInt -eq 0) {
-                            # Connection succeeded (curl exit 0) – treat as PASS, no retry, regardless of HTTP code.
-                            $status   = "Pass"
-                            $errorMsg = "curl exit 0 (connected). HTTP_CODE=$httpCode"
-                            Write-Host "  ✔ $url : CONNECTED (curl exit 0), HTTP $httpCode (attempt $attempt, no further retries)" -ForegroundColor Green
-                            break
-                        }
-                        elseif ($httpCode -and ($httpCode -in $passHttpCodes)) {
-                            # curl exit non-zero but HTTP code is in allowed list – still treat as connectivity OK
-                            $status   = "Pass"
-                            $errorMsg = "curl exit $curlExitInt but HTTP_CODE=$httpCode is in allowed list (treated as reachable)."
-                            Write-Host "  ⚠ $url : curl exit $curlExitInt, HTTP $httpCode (treated as PASS)" -ForegroundColor DarkYellow
-                            break
-                        }
-                        else {
-                            # Real failure: non-zero curl exit and non-allowed HTTP code
-                            $status   = "Fail"
-                            $errorMsg = "curl exit $curlExitInt, HTTP_CODE=$httpCode"
-                            Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
-                        }
+                        # Real HTTP failure
+                        $status   = "Fail"
+                        $errorMsg = "Unexpected HTTP code $httpCode"
+                        Write-Host "  ✖ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Yellow
                     }
                 }
                 catch {
