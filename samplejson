@@ -4,12 +4,11 @@
       "name": "Icpdev-et-order-integrator-api-v1",
       "resourceGroup": "ioticpdevwu2rgordermanagement",
       "endpointSource": {
-        "fileUrl": "https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/blob/master/orderIntegrator-dev.yml?ref_type=heads",
-        "tokenEnvVar": "GITLAB_ACCESS_TOKEN",
-        "urlDetection": {
-          "mode": "ByKey",
-          "urlKey": "url"
-        }
+        "gitLabBaseUrl": "https://gitlab.com",
+        "projectId": 12345678,
+        "branch": "master",
+        "filePath": "orderIntegrator-dev.yml",
+        "tokenEnvVar": "GITLAB_ACCESS_TOKEN"
       }
     }
   ]
