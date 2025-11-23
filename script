@@ -377,7 +377,8 @@ if (-not $fatalErrorOccurred -and $config) {
         # Test each endpoint via Kudu + curl
         # ---------------------------------------------------------------------
         # Treat these HTTP codes as "reachable" from a connectivity standpoint
-        $passHttpCodes = @("200", "301", "302", "307", "404", "401", "403")
+        # (403 is handled separately, conditionally)
+        $passHttpCodes = @("200", "301", "302", "307", "404", "401")
 
         foreach ($url in $endpoints) {
             $attempt   = 0
@@ -408,12 +409,25 @@ if (-not $fatalErrorOccurred -and $config) {
                         Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
                     }
                     elseif ($httpCode -eq "000") {
-                        # Your requested behaviour:
-                        # Treat 000 as Pass and do not retry.
+                        # Treat 000 as Pass and do not retry (as per your config)
                         $status   = "Pass"
                         $errorMsg = "HTTP 000 from curl (treated as PASS per config; connectivity uncertain)."
                         Write-Host "  ⚠ $url : HTTP 000 (treated as PASS, no retry)" -ForegroundColor DarkYellow
                         break
+                    }
+                    elseif ($httpCode -eq "403") {
+                        # Conditional rule: 403 is reachable ONLY if URL contains '.net'
+                        if ($url -match '\.net') {
+                            $status   = "Pass"
+                            $errorMsg = "HTTP 403 for .net endpoint (treated as reachable per rule)."
+                            Write-Host "  ⚠ $url : HTTP 403 (.net endpoint, treated as PASS, no retry)" -ForegroundColor DarkYellow
+                            break
+                        }
+                        else {
+                            $status   = "Fail"
+                            $errorMsg = "HTTP 403 for non-.net endpoint (treated as FAIL)."
+                            Write-Host "  ✖ $url : HTTP 403 (non-.net, treated as FAIL) (attempt $attempt)" -ForegroundColor Yellow
+                        }
                     }
                     elseif ($httpCode -in $passHttpCodes) {
                         # Good connectivity; allowed HTTP status
