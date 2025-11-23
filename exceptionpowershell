@@ -1,7 +1,63 @@
-  Pulling YAML endpoints from GitLab URL:
-    https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/blob/master/orderIntegrator-dev.yml?ref_type=heads
-  Using raw YAML URL:
-    https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/raw/master/orderIntegrator-dev.yml?ref_type=heads
-  Using PAT from CI/CD variable 'GITLAB_ACCESS_TOKEN' (header: PRIVATE-TOKEN)
-❌ Failed to resolve endpoints for 'Icpdev-et-order-integrator-api-v1': Failed to parse YAML content from 'https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/raw/master/orderIntegrator-dev.yml?ref_type=heads': Exception calling "Load" with "1" argument(s): "While scanning a multiline plain scalar, found invalid mapping."
-Connectivity report generated at: connectivity_report.csv
+ [YAML] Source URL (blob):
+         https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/blob/master/orderIntegrator-dev.yml?ref_type=heads
+  [YAML] Raw URL used for download:
+         https://gitlab.com/tmobile/emergingtechnology/iot-devops-sre/spring-config-repository/npe/-/raw/master/orderIntegrator-dev.yml?ref_type=heads
+  [YAML] Using PAT from CI/CD variable 'GITLAB_ACCESS_TOKEN' (PRIVATE-TOKEN)
+  [YAML] Downloading content...
+  [YAML] Download succeeded. Size: 17207 characters.
+  [YAML] Extracting URLs from content (regex-based)...
+  [YAML] Found 19 unique URL(s):
+         - http://ogp.me/ns#
+         - https://gitlab.com/assets/no_avatar-849f9c04a3a0d0cea2424ae97b27447dc64a7dbfae83c036c45b403392f0e8ba.png
+         - https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4
+         - https://www.recaptcha.net/recaptcha/api.js
+         - https://gitlab.com
+         - https://about.gitlab.com
+         - https://forum.gitlab.com
+         - https://docs.gitlab.com
+         - https://embed.diagrams.net
+         - https://customers.gitlab.com
+         - https://customers.gitlab.com/customers/sign_in?legacy=true
+         - https://customers.gitlab.com/billing_accounts
+         - https://customers.gitlab.com/payment_forms/cc_validation
+         - https://gitlab.com/groups/namespace4249178/-/saml/sso?redirect=masked_redirect\u0026token=masked_token
+         - https://snowplowprd.trx.gitlab.net
+         - https://cdn.cookielaw.org/consent/7f944245-c5cd-4eed-a90e-dd955adfdd08/OtAutoBlock.js
+         - https://cdn.cookielaw.org/scripttemplates/otSDKStub.js
+         - https://gitlab.com/uploads/-/system/group/avatar/4249178/cq5dam.thumbnail.319.319.png
+         - https://gitlab.com/groups/tmobile/-/saml/sso?redirect=%2Ftmobile%2Femergingtechnology%2Fiot-devops-sre%2Fspring-config-repository%2Fnpe%2F-%2Fraw%2Fmaster%2ForderIntegrator-dev.yml%3Fref_type%3Dheads&amp;token=Sdeee73w
+[KUDU] Fetching publishing profile for 'Icpdev-et-order-integrator-api-v1'...
+[KUDU] Publishing profile retrieved.
+[KUDU] Using URL: https://Icpdev-et-order-integrator-api-v1.scm.azurewebsites.net/api/command?waitForExit=true&log=true
+[TEST] Checking endpoint: http://ogp.me/ns#
+  ✖ http://ogp.me/ns# : HTTP 000 (attempt 1)
+  ...retrying in 5 seconds (attempt 2 of 3)...
+  ✖ http://ogp.me/ns# : HTTP 000 (attempt 2)
+  ...retrying in 5 seconds (attempt 3 of 3)...
+  ✖ http://ogp.me/ns# : HTTP 000 (attempt 3)
+[TEST] Checking endpoint: https://gitlab.com/assets/no_avatar-849f9c04a3a0d0cea2424ae97b27447dc64a7dbfae83c036c45b403392f0e8ba.png
+  ✔ https://gitlab.com/assets/no_avatar-849f9c04a3a0d0cea2424ae97b27447dc64a7dbfae83c036c45b403392f0e8ba.png : HTTP 200 (attempt 1)
+[TEST] Checking endpoint: https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4
+  ✖ https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4 : HTTP 000 (attempt 1)
+  ...retrying in 5 seconds (attempt 2 of 3)...
+  ✖ https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4 : HTTP 000 (attempt 2)
+  ...retrying in 5 seconds (attempt 3 of 3)...
+  ✖ https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4 : HTTP 000 (attempt 3)
+[TEST] Checking endpoint: https://www.recaptcha.net/recaptcha/api.js
+  ✖ https://www.recaptcha.net/recaptcha/api.js : HTTP 000 (attempt 1)
+  ...retrying in 5 seconds (attempt 2 of 3)...
+  ✖ https://www.recaptcha.net/recaptcha/api.js : HTTP 000 (attempt 2)
+  ...retrying in 5 seconds (attempt 3 of 3)...
+  ✖ https://www.recaptcha.net/recaptcha/api.js : HTTP 000 (attempt 3)
+[TEST] Checking endpoint: https://gitlab.com
+  ✖ https://gitlab.com : HTTP 301 (attempt 1)
+  ...retrying in 5 seconds (attempt 2 of 3)...
+  ✖ https://gitlab.com : HTTP 301 (attempt 2)
+  ...retrying in 5 seconds (attempt 3 of 3)...
+  ✖ https://gitlab.com : HTTP 301 (attempt 3)
+[TEST] Checking endpoint: https://about.gitlab.com
+  ✖ https://about.gitlab.com : HTTP 000 (attempt 1)
+  ...retrying in 5 seconds (attempt 2 of 3)...
+  ✖ https://about.gitlab.com : HTTP 000 (attempt 2)
+  ...retrying in 5 seconds (attempt 3 of 3)...
+  ✖ https://about.gitlab.com : HTTP 000 (attempt 3)
