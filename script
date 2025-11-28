@@ -2,509 +2,161 @@
 Param (
     [Parameter (Mandatory = $true)]
     [String] $SubscriptionName,
-
     [Parameter (Mandatory = $true)]
     [String] $ParameterFilePath,
-
-    [Parameter (Mandatory = $false)]
-    [String] $ReportPath = "connectivity_report.csv"
+    [Parameter(Mandatory = $false)]
+    [String] $EndpointsFilePath
 )
 
-# ============================================================================================
-# GLOBAL SETTINGS
-# ============================================================================================
-$ErrorActionPreference = "Stop"
+
+# Install and import Az module
+Install-Module -Name Az -Scope CurrentUser -Force -AllowClobber
+Import-Module -Name Az -Force
+Install-Module -name az -Scope CurrentUser -Force
+Import-Module -name az -Global -Force
+
+
+# Login using SPN credentials
+if ($SubscriptionName -eq 'Azure.IOTNPE') {
+    $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD
+    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID
+}
+elseif ($SubscriptionName -eq 'Azure.IOTPROD') {
+    $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD_PROD
+    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID_PROD
+}
+
+$tenantId = $env:AZ_SERVICE_PRINCIPAL_TENANT
+$SecuredPassword = ConvertTo-SecureString -String $spnKey -AsPlainText -Force
+$Credential = New-Object System.Management.Automation.PSCredential($spnId, $SecuredPassword)
+
+
+Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $Credential
+Select-AzSubscription -SubscriptionName $SubscriptionName
+
+# Load parameter file
+$appServices = Get-Content -Path $ParameterFilePath | ConvertFrom-Json
+$reportPath = "connectivity_report.csv"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-Write-Host "================ AppService Egress Connectivity Check ================" -ForegroundColor Cyan
-Write-Host "Subscription : $SubscriptionName"
-Write-Host "Param file   : $ParameterFilePath"
-Write-Host "Report path  : $ReportPath"
-Write-Host "=======================================================================" -ForegroundColor Cyan
-
-# Track fatal errors vs endpoint failures
-$fatalErrorOccurred = $false
-$anyEndpointFailed  = $false
-
-Add-Type -AssemblyName System.Web
-
-# Prepare results early so we can still write CSV even if something fails later
-$results = New-Object System.Collections.Generic.List[object]
-
-# ============================================================================================
-# MODULES
-# ============================================================================================
-try {
-    Write-Host "[INIT] Loading Az modules..." -ForegroundColor Cyan
-    Install-Module -Name Az -Scope CurrentUser -Force -AllowClobber | Out-Null
-    Import-Module  -Name Az -Force
-    Write-Host "[INIT] Az modules loaded." -ForegroundColor Green
-}
-catch {
-    Write-Host "[ERROR] Failed to install/import Az modules: $($_.Exception.Message)" -ForegroundColor Red
-    $fatalErrorOccurred = $true
-}
-
-# ============================================================================================
-# AUTHENTICATION (AZURE SPN)
-# ============================================================================================
-if (-not $fatalErrorOccurred) {
-    try {
-        Write-Host "[AUTH] Authenticating to Azure subscription '$SubscriptionName'..." -ForegroundColor Cyan
-
-        switch ($SubscriptionName) {
-            "Azure.IOTNPE" {
-                $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD
-                $spnId  = $env:AZ_SERVICE_PRINCIPAL_ID
-            }
-            "Azure.IOTPROD" {
-                $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD_PROD
-                $spnId  = $env:AZ_SERVICE_PRINCIPAL_ID_PROD
-            }
-            default {
-                throw "Unsupported SubscriptionName '$SubscriptionName'. Extend SPN mapping in script."
-            }
-        }
-
-        $tenantId = $env:AZ_SERVICE_PRINCIPAL_TENANT
-        if (-not $spnKey -or -not $spnId -or -not $tenantId) {
-            throw "SPN environment variables are not fully set. Check AZ_SERVICE_PRINCIPAL_* variables."
-        }
-
-        $securePw = ConvertTo-SecureString $spnKey -AsPlainText -Force
-        $cred     = New-Object System.Management.Automation.PSCredential($spnId, $securePw)
-
-        Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred | Out-Null
-        Select-AzSubscription -SubscriptionName $SubscriptionName | Out-Null
-
-        Write-Host "[AUTH] Azure authentication succeeded." -ForegroundColor Green
-    }
-    catch {
-        Write-Host "[ERROR] Azure authentication failed: $($_.Exception.Message)" -ForegroundColor Red
-        $fatalErrorOccurred = $true
-    }
-}
-
-# ============================================================================================
-# HELPER: Extract URLs from arbitrary text (regex based)
-# ============================================================================================
-function Get-UrlsFromText {
-    param(
-        [Parameter(Mandatory = $true)] [string] $Text
-    )
-
-    $pattern = 'https?://[^\s''""]+'
-
-    $matches = [System.Text.RegularExpressions.Regex]::Matches($Text, $pattern)
-    if (-not $matches -or $matches.Count -eq 0) {
-        return @()
-    }
-
-    $urls = $matches |
-        ForEach-Object {
-            $_.Value.TrimEnd('.', ',', ';', ')', ']', '}', '"', '''')
-        } |
-        Where-Object { $_ -ne "" } |
-        Select-Object -Unique
-
-    return $urls
-}
-
-# ============================================================================================
-# HELPER: Get raw file text from GitLab API
-# ============================================================================================
-function Get-GitLabFileText {
-    param(
-        [Parameter(Mandatory = $true)] [string] $GitLabBaseUrl,
-        [Parameter(Mandatory = $false)] [int]    $ProjectId,
-        [Parameter(Mandatory = $false)] [string] $ProjectPath,
-        [Parameter(Mandatory = $true)] [string] $FilePath,
-        [Parameter(Mandatory = $true)] [string] $Branch,
-        [Parameter(Mandatory = $true)] [string] $TokenEnvVar
-    )
-
-    # 1) Resolve token
-    $tokenValue = (Get-Item -Path "Env:$TokenEnvVar" -ErrorAction SilentlyContinue).Value
-    if (-not $tokenValue) {
-        throw "[YAML] Environment variable '$TokenEnvVar' not set. Cannot authenticate to GitLab."
-    }
-
-    $headers = @{ "PRIVATE-TOKEN" = $tokenValue }
-    Write-Host "  [YAML] Using PAT from '$TokenEnvVar' (PRIVATE-TOKEN)" -ForegroundColor DarkCyan
-
-    # 2) Resolve project ID if not provided
-    if (-not $ProjectId) {
-        if (-not $ProjectPath) {
-            throw "[YAML] Either 'projectId' or 'projectPath' must be provided."
-        }
-
-        $encodedProject = [System.Web.HttpUtility]::UrlEncode($ProjectPath)
-        $projectApi     = "$GitLabBaseUrl/api/v4/projects/$encodedProject"
-
-        Write-Host "  [YAML] Resolving project via: $projectApi" -ForegroundColor DarkCyan
-
-        try {
-            $project   = Invoke-RestMethod -Uri $projectApi -Headers $headers -Method GET
-            $ProjectId = $project.id
-            if (-not $ProjectId) {
-                throw "Project ID not found in GitLab response."
-            }
-        }
-        catch {
-            $statusCode = $null
-            $statusDesc = $null
-            if ($_.Exception.Response -ne $null) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
-                $statusDesc = $_.Exception.Response.StatusDescription
-            }
-
-            if ($statusCode -eq 404) {
-                throw "[YAML] Failed to resolve GitLab project '$ProjectPath' (404 Not Found). Check:
-  - gitLabBaseUrl ('$GitLabBaseUrl')
-  - projectPath ('$ProjectPath')
-  - PAT user access."
-            }
-            elseif ($statusCode) {
-                throw "[YAML] Failed to resolve GitLab project '$ProjectPath' (HTTP $statusCode $statusDesc): $($_.Exception.Message)"
-            }
-            else {
-                throw "[YAML] Failed to resolve GitLab project '$ProjectPath': $($_.Exception.Message)"
-            }
-        }
-    }
-    else {
-        Write-Host "  [YAML] Using provided projectId=$ProjectId" -ForegroundColor DarkCyan
-    }
-
-    # 3) Fetch file via API
-    $encodedFile = [System.Web.HttpUtility]::UrlEncode($FilePath)
-    $fileApi     = "$GitLabBaseUrl/api/v4/projects/$ProjectId/repository/files/$encodedFile/raw?ref=$Branch"
-
-    Write-Host "  [YAML] Fetching raw file via API:" -ForegroundColor DarkCyan
-    Write-Host "         $fileApi" -ForegroundColor DarkCyan
-
-    try {
-        $text = Invoke-RestMethod -Uri $fileApi -Headers $headers -Method GET
-    }
-    catch {
-        $statusCode = $null
-        $statusDesc = $null
-        if ($_.Exception.Response -ne $null) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            $statusDesc = $_.Exception.Response.StatusDescription
-        }
-
-        if ($statusCode -eq 404) {
-            throw "[YAML] File '$FilePath' not found on branch '$Branch' (HTTP 404)."
-        }
-        elseif ($statusCode) {
-            throw "[YAML] Failed to fetch file '$FilePath' (HTTP $statusCode $statusDesc): $($_.Exception.Message)"
-        }
-        else {
-            throw "[YAML] Failed to fetch file '$FilePath': $($_.Exception.Message)"
-        }
-    }
-
-    if (-not $text -or $text.Trim().Length -eq 0) {
-        throw "[YAML] Raw file '$FilePath' is empty."
-    }
-
-    # 4) Sanity check: ensure not HTML
-    $sample = $text.Substring(0, [Math]::Min(200, $text.Length)).Trim()
-    if ($sample -match '<!DOCTYPE html' -or $sample -match '<html' -or $sample -match '<body') {
-        throw "[YAML] GitLab API returned HTML for '$FilePath'. This should not happen; verify PAT and projectId/projectPath."
-    }
-
-    Write-Host "  [YAML] Raw file content retrieved (length=$($text.Length))." -ForegroundColor Green
-    return $text
-}
-
-# ============================================================================================
-# HELPER: Get endpoints (URLs) from GitLab API
-# ============================================================================================
-function Get-EndpointsFromGitLabApi {
-    param(
-        [Parameter(Mandatory = $true)] [string] $GitLabBaseUrl,
-        [Parameter(Mandatory = $false)] [int]    $ProjectId,
-        [Parameter(Mandatory = $false)] [string] $ProjectPath,
-        [Parameter(Mandatory = $true)] [string] $FilePath,
-        [Parameter(Mandatory = $true)] [string] $Branch,
-        [Parameter(Mandatory = $true)] [string] $TokenEnvVar
-    )
-
-    $text = Get-GitLabFileText `
-                -GitLabBaseUrl $GitLabBaseUrl `
-                -ProjectId     $ProjectId `
-                -ProjectPath   $ProjectPath `
-                -FilePath      $FilePath `
-                -Branch        $Branch `
-                -TokenEnvVar   $TokenEnvVar
-
-    Write-Host "  [YAML] Extracting URLs from raw file text..." -ForegroundColor DarkCyan
-    $urls = Get-UrlsFromText -Text $text
-
-    if (-not $urls -or $urls.Count -eq 0) {
-        throw "[YAML] No URLs found in '$FilePath'."
-    }
-
-    Write-Host "  [YAML] Found $($urls.Count) unique URL(s):" -ForegroundColor Green
-    foreach ($u in $urls) {
-        Write-Host "         - $u" -ForegroundColor Green
-    }
-
-    return $urls
-}
-
-# ============================================================================================
-# LOAD PARAMETER FILE
-# ============================================================================================
-$config = $null
-if (-not $fatalErrorOccurred) {
-    try {
-        Write-Host "[CONFIG] Loading parameter file: $ParameterFilePath" -ForegroundColor Cyan
-        $config = Get-Content -Path $ParameterFilePath -Raw | ConvertFrom-Json -Depth 100
-        Write-Host "[CONFIG] Loaded $(($config.appServices).Count) appService definition(s)." -ForegroundColor Green
-    }
-    catch {
-        Write-Host "[ERROR] Failed to load/parse parameter file '$ParameterFilePath': $($_.Exception.Message)" -ForegroundColor Red
-        $fatalErrorOccurred = $true
-    }
-}
-
-# ============================================================================================
-# MAIN LOOP: APP SERVICE → GITLAB API → ENDPOINTS → KUDU CURL
-# ============================================================================================
-if (-not $fatalErrorOccurred -and $config) {
-
-    foreach ($app in $config.appServices) {
-
-        Write-Host ""
-        Write-Host "===============================" -ForegroundColor DarkCyan
-        Write-Host "AppService    : $($app.name)"          -ForegroundColor DarkCyan
-        Write-Host "Resource Group: $($app.resourceGroup)" -ForegroundColor DarkCyan
-        Write-Host "===============================" -ForegroundColor DarkCyan
-
-        if ($app.PSObject.Properties.Name -contains 'endpoints') {
-            Write-Host "[WARN] AppService '$($app.name)' still has 'endpoints' in JSON. This is ignored (GitLab file is the only source)." -ForegroundColor Yellow
-        }
-
-        if (-not $app.endpointSource) {
-            Write-Host "[ERROR] AppService '$($app.name)' is missing 'endpointSource' block. Skipping." -ForegroundColor Red
-            $fatalErrorOccurred = $true
-            continue
-        }
-
-        $src = $app.endpointSource
-
-        # Required GitLab attributes
-        if (-not $src.gitLabBaseUrl -or -not $src.filePath -or -not $src.branch -or -not $src.tokenEnvVar) {
-            Write-Host "[ERROR] AppService '$($app.name)': endpointSource.gitLabBaseUrl, filePath, branch, and tokenEnvVar are mandatory. Skipping." -ForegroundColor Red
-            $fatalErrorOccurred = $true
-            continue
-        }
-
-        $gitLabBaseUrl = $src.gitLabBaseUrl
-        $branch        = $src.branch
-        $filePath      = $src.filePath
-        $tokenEnvVar   = $src.tokenEnvVar
-
-        $projectId   = $null
-        $projectPath = $null
-
-        if ($src.PSObject.Properties.Name -contains 'projectId' -and $src.projectId) {
-            $projectId = [int]$src.projectId
-        }
-        if ($src.PSObject.Properties.Name -contains 'projectPath' -and $src.projectPath) {
-            $projectPath = $src.projectPath
-        }
-
-        if (-not $projectId -and -not $projectPath) {
-            Write-Host "[ERROR] AppService '$($app.name)': endpointSource must have either 'projectId' or 'projectPath'." -ForegroundColor Red
-            $fatalErrorOccurred = $true
-            continue
-        }
-
-        # ---------------------------------------------------------------------
-        # Resolve endpoints from GitLab API
-        # ---------------------------------------------------------------------
-        $endpoints = @()
-        try {
-            $endpoints = Get-EndpointsFromGitLabApi `
-                            -GitLabBaseUrl $gitLabBaseUrl `
-                            -ProjectId     $projectId `
-                            -ProjectPath   $projectPath `
-                            -FilePath      $filePath `
-                            -Branch        $branch `
-                            -TokenEnvVar   $tokenEnvVar
-        }
-        catch {
-            Write-Host "❌ [APP] Failed to resolve endpoints for '$($app.name)':" -ForegroundColor Red
-            Write-Host "   $($_.Exception.Message)" -ForegroundColor Red
-            $fatalErrorOccurred = $true
-            continue
-        }
-
-        # ---------------------------------------------------------------------
-        # Get Kudu publishing profile
-        # ---------------------------------------------------------------------
-        $uname = $null
-        $pwd   = $null
-        try {
-            Write-Host "[KUDU] Fetching publishing profile for '$($app.name)'..." -ForegroundColor Cyan
-            $profile = Get-AzWebAppPublishingProfile -Name $app.name -ResourceGroupName $app.resourceGroup -OutputFile $null
-            $xml     = [xml]$profile
-            $uname   = $xml.publishData.publishProfile[0].userName
-            $pwd     = $xml.publishData.publishProfile[0].userPWD
-            Write-Host "[KUDU] Publishing profile retrieved." -ForegroundColor Green
-        }
-        catch {
-            Write-Host "❌ [KUDU] Failed to get publishing profile for '$($app.name)': $($_.Exception.Message)" -ForegroundColor Red
-            $fatalErrorOccurred = $true
-            continue
-        }
-
-        $pair    = "$uname`:$pwd"
-        $auth    = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
-        $headers = @{
-            Authorization = "Basic $auth"
-            Accept        = "application/json"
-        }
-        $kuduUrl = "https://$($app.name).scm.azurewebsites.net/api/command?waitForExit=true&log=true"
-
-        Write-Host "[KUDU] Using URL: $kuduUrl" -ForegroundColor DarkCyan
-
-        # ---------------------------------------------------------------------
-        # Test each endpoint via Kudu + curl
-        # ---------------------------------------------------------------------
-        # Treat these HTTP codes as "reachable" from a connectivity standpoint
-        # (403 is handled separately, conditionally)
-        $passHttpCodes = @("200", "301", "302", "307", "404", "401")
-
-        foreach ($url in $endpoints) {
-            $attempt   = 0
-            $max       = 3
-            $status    = "Fail"
-            $httpCode  = ""
-            $errorMsg  = $null
-
-            Write-Host "[TEST] Checking endpoint: $url" -ForegroundColor Cyan
-
-            while ($attempt -lt $max) {
-                $attempt++
-
-                try {
-                    # Use curl to emit only the HTTP code
-                    $cmd  = "curl -k -s -o /dev/null -w '%{http_code}' $url"
-                    $body = @{ command = $cmd; dir = "/home" } | ConvertTo-Json
-
-                    $resp      = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
-                    $rawOutput = ($resp.Output -replace "`r","").Trim()
-
-                    # Extract digits from the raw output
-                    $httpCode = ($rawOutput -replace "[^0-9]", "")
-
-                    if ([string]::IsNullOrWhiteSpace($httpCode)) {
-                        $status   = "Fail"
-                        $errorMsg = "No HTTP code parsed from curl output. Raw output: '$rawOutput'"
-                        Write-Host "  ✖ $url : $errorMsg (attempt $attempt)" -ForegroundColor Yellow
-                    }
-                    elseif ($httpCode -eq "000") {
-                        # Treat 000 as Pass and do not retry (as per your config)
-                        $status   = "Pass"
-                        $errorMsg = "HTTP 000 from curl (treated as PASS per config; connectivity uncertain)."
-                        Write-Host "  ⚠ $url : HTTP 000 (treated as PASS, no retry)" -ForegroundColor DarkYellow
-                        break
-                    }
-                    elseif ($httpCode -eq "403") {
-                        # Conditional rule: 403 is reachable ONLY if URL contains '.net'
-                        if ($url -match '\.net') {
-                            $status   = "Pass"
-                            $errorMsg = "HTTP 403 for .net endpoint (treated as reachable per rule)."
-                            Write-Host "  ⚠ $url : HTTP 403 (.net endpoint, treated as PASS, no retry)" -ForegroundColor DarkYellow
-                            break
-                        }
-                        else {
-                            $status   = "Fail"
-                            $errorMsg = "HTTP 403 for non-.net endpoint (treated as FAIL)."
-                            Write-Host "  ✖ $url : HTTP 403 (non-.net, treated as FAIL) (attempt $attempt)" -ForegroundColor Yellow
-                        }
-                    }
-                    elseif ($httpCode -in $passHttpCodes) {
-                        # Good connectivity; allowed HTTP status
-                        $status   = "Pass"
-                        $errorMsg = "HTTP $httpCode (treated as reachable)."
-                        Write-Host "  ✔ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Green
-                        break
-                    }
-                    else {
-                        # Real HTTP failure
-                        $status   = "Fail"
-                        $errorMsg = "Unexpected HTTP code $httpCode"
-                        Write-Host "  ✖ $url : HTTP $httpCode (attempt $attempt)" -ForegroundColor Yellow
-                    }
-                }
-                catch {
-                    $status   = "Fail"
-                    $errorMsg = $_.Exception.Message
-                    Write-Host "  ✖ $url : Exception on attempt $attempt -> $errorMsg" -ForegroundColor Red
-                }
-
-                if ($status -ne "Pass" -and $attempt -lt $max) {
-                    Write-Host "  ...retrying in 5 seconds (attempt $($attempt + 1) of $max)..." -ForegroundColor DarkYellow
-                    Start-Sleep -Seconds 5
-                }
-                else {
-                    # either Pass, or we've exhausted attempts
-                    break
-                }
-            }
-
-            if ($status -ne "Pass") {
-                # Record that at least one endpoint failed (for reporting only; job still succeeds per your design)
-                $anyEndpointFailed = $true
-            }
-
-            $results.Add([pscustomobject]@{
-                AppService    = $app.name
-                ResourceGroup = $app.resourceGroup
-                Endpoint      = $url
-                HTTPCode      = $httpCode
-                Status        = $status
-                Attempts      = $attempt
-                Error         = $errorMsg
-                Timestamp     = (Get-Date).ToString("s")
-            })
-        }
-    }
-}
-
-# ============================================================================================
-# REPORT + EXIT CODE
-# ============================================================================================
-try {
-    if ($results.Count -gt 0) {
-        $results | Export-Csv -Path $ReportPath -NoTypeInformation
-        Write-Host "`n[REPORT] Connectivity report generated at: $ReportPath" -ForegroundColor Cyan
-    }
-    else {
-        Write-Host "[REPORT] No results to write (no endpoints processed)." -ForegroundColor Yellow
-    }
-}
-catch {
-    Write-Host "[ERROR] Failed to write report to '$ReportPath': $($_.Exception.Message)" -ForegroundColor Red
-    $fatalErrorOccurred = $true
-}
-
-if ($fatalErrorOccurred) {
-    Write-Host "[RESULT] Fatal errors occurred (config/auth/GitLab API/Kudu/report). Job marked as FAILED." -ForegroundColor Red
+# Load endpoints
+if ($EndpointsFilePath) {
+    $endpoints = (Import-Csv -Path $EndpointsFilePath).Endpoint
+} else {
+    Write-Host "❌ No endpoints file provided" -ForegroundColor Red
     exit 1
 }
-else {
-    if ($anyEndpointFailed) {
-        Write-Host "[RESULT] Job SUCCESSFUL, but some endpoints FAILED connectivity. See report for details." -ForegroundColor Yellow
+
+Write-Host "✅ Testing $($endpoints.Count) endpoints across $($appServices.appServices.Count) App Services."
+
+# Create Runspace Pool
+$runspacePool = [runspacefactory]::CreateRunspacePool(1, 15) # 15 threads max
+$runspacePool.Open()
+$jobs = @()
+
+foreach ($appService in $appServices.appServices) {
+    $appName       = $appService.name
+    $resourceGroup = $appService.resourceGroup
+
+    # Get Kudu credentials for this App Service
+    $publishingProfile = Get-AzWebAppPublishingProfile -Name $appName -ResourceGroupName $resourceGroup -OutputFile null
+    $xml      = [xml]$publishingProfile
+    $userName = $xml.publishData.publishProfile[0].userName
+    $password = $xml.publishData.publishProfile[0].userPWD
+    $pair         = "${userName}:${password}"
+    $encodedCreds = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
+    $headers      = @{ Authorization = "Basic $encodedCreds"; Accept = "application/json" }
+    $kuduUrl      = "https://$appName.scm.azurewebsites.net/api/command?waitForExit=true&log=true"
+
+    foreach ($endpoint in $endpoints) {
+        $ps = [powershell]::Create()
+        $ps.RunspacePool = $runspacePool
+
+        $null = $ps.AddScript({
+            param($endpoint, $headers, $kuduUrl, $appName, $resourceGroup)
+            $status = "Fail"; $httpCode = "000"; $protocol = ""; $ErrorMessage = ""; $connectionInfo = ""; $attempt = 0; $maxAttempts = 3
+
+            while ($attempt -lt $maxAttempts) {
+                try {
+                    $attempt++
+                    # Curl verbose output
+                    $command = "curl -skv $endpoint 2>&1"
+                    $body    = @{ command = $command; dir = "/home" } | ConvertTo-Json
+                    $response = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
+                    # ✅ Normalize output
+                    $rawOutput = $response.Output -replace "`r","" -split "`n"
+
+            # Extract HTTP code and protocol from verbose output
+            $httpMatches = ($rawOutput | Select-String 'HTTP/[0-9.]+\s+([0-9]{3})')
+            if ($httpMatches) {
+                $lastMatch = $httpMatches[-1]
+                $httpCode = $lastMatch.Matches.Groups[1].Value
+                $protocol = ($lastMatch.Matches.Groups[0].Value -split ' ')[0] -replace 'HTTP/', ''
+            } else {
+                # Fallback: check JSON error for status
+                $jsonStatus = ($rawOutput | Select-String '"status"\s*:\s*"([0-9]{3})"')
+                if ($jsonStatus) {
+                    $httpCode = $jsonStatus.Matches.Groups[1].Value
+                }
+            }
+
+            # Capture connection info
+            $connectionInfo = ($rawOutput | Where-Object { $_ -match '^Connected to' }) -join '; '
+
+
+                # Determine status
+                $allowedCodes = @("200","201","204","400","401","403","404")
+                if ($httpCode -in $allowedCodes) {
+                $status = "Pass"
+            } elseif ($connectionInfo) {
+                $status = "Pass"
+            } elseif ($rawOutput -match 'Could not resolve host') {
+                $status = "Fail"
+            } else {
+                $status = "Fail"
+            }
+            if ($status -eq "Fail") {
+                $ErrorMessage = ($rawOutput -join "`n")
+            }
+                    break
+                } catch {
+                    $ErrorMessage = $_.Exception.Message
+                }
+                Start-Sleep -Seconds 5
+            }
+
+            [PSCustomObject]@{
+                AppService    = $appName
+                ResourceGroup = $resourceGroup
+                Endpoint      = $endpoint
+                HTTPCode      = $httpCode
+                Protocol      = $protocol
+                Connection    = $connectionInfo
+                Status        = $status
+                ErrorMessage  = $ErrorMessage
+                Timestamp     = (Get-Date).ToString("s")
+            }
+        }).AddArgument($endpoint).AddArgument($headers).AddArgument($kuduUrl).AddArgument($appName).AddArgument($resourceGroup)
+
+        $jobs += [PSCustomObject]@{ Pipe = $ps; Handle = $ps.BeginInvoke() }
     }
-    else {
-        Write-Host "[RESULT] Job SUCCESSFUL. All endpoints PASSED connectivity checks." -ForegroundColor Green
-    }
-    exit 0
 }
+
+# Collect results
+$results = @()
+$counter = 0
+foreach ($job in $jobs) {
+    $output = $job.Pipe.EndInvoke($job.Handle)
+    $results += $output
+    $job.Pipe.Dispose()
+    $counter++
+    if ($counter % 50 -eq 0) { Write-Host "Progress: $counter / $($jobs.Count) tests completed." }
+}
+
+# Close runspace pool
+$runspacePool.Close()
+$runspacePool.Dispose()
+
+# Export results
+$results | Export-Csv -Path $reportPath -NoTypeInformation
+Write-Host "`n✅ Connectivity report generated at $reportPath"
