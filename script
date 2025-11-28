@@ -8,35 +8,32 @@ Param (
     [String] $EndpointsFilePath
 )
 
-
 # Install and import Az module
 Install-Module -Name Az -Scope CurrentUser -Force -AllowClobber
 Import-Module -Name Az -Force
 Install-Module -name az -Scope CurrentUser -Force
 Import-Module -name az -Global -Force
 
-
 # Login using SPN credentials
 if ($SubscriptionName -eq 'Azure.IOTNPE') {
     $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD
-    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID
+    $spnId  = $env:AZ_SERVICE_PRINCIPAL_ID
 }
 elseif ($SubscriptionName -eq 'Azure.IOTPROD') {
     $spnKey = $env:AZ_SERVICE_PRINCIPAL_PASSWORD_PROD
-    $spnId = $env:AZ_SERVICE_PRINCIPAL_ID_PROD
+    $spnId  = $env:AZ_SERVICE_PRINCIPAL_ID_PROD
 }
 
-$tenantId = $env:AZ_SERVICE_PRINCIPAL_TENANT
+$tenantId       = $env:AZ_SERVICE_PRINCIPAL_TENANT
 $SecuredPassword = ConvertTo-SecureString -String $spnKey -AsPlainText -Force
-$Credential = New-Object System.Management.Automation.PSCredential($spnId, $SecuredPassword)
-
+$Credential      = New-Object System.Management.Automation.PSCredential($spnId, $SecuredPassword)
 
 Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $Credential
 Select-AzSubscription -SubscriptionName $SubscriptionName
 
 # Load parameter file
 $appServices = Get-Content -Path $ParameterFilePath | ConvertFrom-Json
-$reportPath = "connectivity_report.csv"
+$reportPath  = "connectivity_report.csv"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Load endpoints
@@ -74,55 +71,196 @@ foreach ($appService in $appServices.appServices) {
 
         $null = $ps.AddScript({
             param($endpoint, $headers, $kuduUrl, $appName, $resourceGroup)
-            $status = "Fail"; $httpCode = "000"; $protocol = ""; $ErrorMessage = ""; $connectionInfo = ""; $attempt = 0; $maxAttempts = 3
+
+            $status        = "Fail"
+            $httpCode      = "000"
+            $protocol      = ""
+            $ErrorMessage  = ""
+            $connectionInfo = ""
+            $attempt       = 0
+            $maxAttempts   = 3
+
+            # Derive protocol from endpoint
+            if ($endpoint -match '^(https?)://') {
+                $protocol = $Matches[1]
+            }
+
+            # Curl tunables (keep these small so we don't hang)
+            $connectTimeout = 3   # seconds for TCP connect
+            $totalTimeout   = 5   # overall per-endpoint timeout
 
             while ($attempt -lt $maxAttempts) {
+                $attempt++
+                $status        = "Fail"
+                $httpCode      = "000"
+                $ErrorMessage  = ""
+                $connectionInfo = ""
+                $category      = ""
+                $shouldRetry   = $true
+
                 try {
-                    $attempt++
-                    # Curl verbose output
-                    $command = "curl -skv $endpoint 2>&1"
-                    $body    = @{ command = $command; dir = "/home" } | ConvertTo-Json
+                    # Curl with metrics output and exit code marker
+                    $command = "curl -k -sS -o /dev/null --connect-timeout $connectTimeout --max-time $totalTimeout -w `"HTTP_CODE:%{http_code} REMOTE_IP:%{remote_ip} TIME_NAMEL:%{time_namelookup} TIME_CONN:%{time_connect} TIME_TLS:%{time_appconnect} TIME_TTFB:%{time_starttransfer} TIME_TOTAL:%{time_total}`" $endpoint; echo 'CURL_EXIT:'`$?"
+
+                    $body     = @{ command = $command; dir = "/home" } | ConvertTo-Json
                     $response = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
-                    # ✅ Normalize output
+
+                    # Normalize output
                     $rawOutput = $response.Output -replace "`r","" -split "`n"
 
-            # Extract HTTP code and protocol from verbose output
-            $httpMatches = ($rawOutput | Select-String 'HTTP/[0-9.]+\s+([0-9]{3})')
-            if ($httpMatches) {
-                $lastMatch = $httpMatches[-1]
-                $httpCode = $lastMatch.Matches.Groups[1].Value
-                $protocol = ($lastMatch.Matches.Groups[0].Value -split ' ')[0] -replace 'HTTP/', ''
-            } else {
-                # Fallback: check JSON error for status
-                $jsonStatus = ($rawOutput | Select-String '"status"\s*:\s*"([0-9]{3})"')
-                if ($jsonStatus) {
-                    $httpCode = $jsonStatus.Matches.Groups[1].Value
+                    # Parse curl exit code
+                    $curlExitLine = $rawOutput | Where-Object { $_ -match '^CURL_EXIT:' } | Select-Object -Last 1
+                    $curlExitCode = -1
+                    if ($curlExitLine) {
+                        $curlExitCode = [int]($curlExitLine -replace '^CURL_EXIT:','' ).Trim()
+                    }
+
+                    # Parse metrics line
+                    $metricsLine = $rawOutput | Where-Object { $_ -match '^HTTP_CODE:' } | Select-Object -Last 1
+                    $remoteIp    = ""
+                    [double]$timeConn   = 0
+                    [double]$timeTotal  = 0
+                    [double]$timeNamel  = 0
+                    [double]$timeTls    = 0
+                    [double]$timeTtfb   = 0
+
+                    if ($metricsLine) {
+                        if ($metricsLine -match 'HTTP_CODE:(\d{3})') { $httpCode = $Matches[1] }
+                        if ($metricsLine -match 'REMOTE_IP:([^\s]+)') { $remoteIp = $Matches[1] }
+                        if ($metricsLine -match 'TIME_NAMEL:([0-9.]+)') { [double]$timeNamel  = $Matches[1] }
+                        if ($metricsLine -match 'TIME_CONN:([0-9.]+)')  { [double]$timeConn   = $Matches[1] }
+                        if ($metricsLine -match 'TIME_TLS:([0-9.]+)')   { [double]$timeTls    = $Matches[1] }
+                        if ($metricsLine -match 'TIME_TTFB:([0-9.]+)')  { [double]$timeTtfb   = $Matches[1] }
+                        if ($metricsLine -match 'TIME_TOTAL:([0-9.]+)') { [double]$timeTotal  = $Matches[1] }
+                    }
+
+                    # Classification logic
+                    $allowedCodes = @("200","201","204","400","401","404")
+                    $endpointHasDotNet = $endpoint -like "*.net*"  # treat 403 as reachable only if endpoint contains .net
+
+                    # First priority: if we have a non-000 HTTP code, consider that authoritative
+                    if ($httpCode -ne "000") {
+                        if ($httpCode -in $allowedCodes -or ($httpCode -eq "403" -and $endpointHasDotNet)) {
+                            $status      = "Pass"
+                            $category    = "HTTP_OK"
+                            $shouldRetry = $false
+                        }
+                        else {
+                            $status      = "Fail"
+                            $category    = "HTTP_OTHER"
+                            $shouldRetry = $false   # HTTP-level failures usually not fixed by retry
+                        }
+                    }
+                    else {
+                        # HTTP 000 – disambiguate based on curl exit code and time_connect
+
+                        # DNS failure string (defensive in case curl output includes it)
+                        if ($rawOutput -match 'Could not resolve host') {
+                            $status      = "Fail"
+                            $category    = "DNS_FAIL"
+                            $shouldRetry = $false
+                        }
+                        else {
+                            switch ($curlExitCode) {
+                                0 {
+                                    # Exit 0 but httpCode==000: very rare; if timeConn>0, treat as reachable.
+                                    if ($timeConn -gt 0) {
+                                        $status      = "Pass"
+                                        $category    = "CONNECT_OK_NO_HTTP_CODE"
+                                        $shouldRetry = $false
+                                    } else {
+                                        $status      = "Fail"
+                                        $category    = "UNKNOWN_BEFORE_CONNECT"
+                                        $shouldRetry = $false
+                                    }
+                                }
+                                6 {
+                                    $status      = "Fail"
+                                    $category    = "DNS_FAIL"
+                                    $shouldRetry = $false
+                                }
+                                7 {
+                                    if ($timeConn -gt 0) {
+                                        $status      = "Fail"
+                                        $category    = "TCP_FAIL_AFTER_CONNECT"
+                                    } else {
+                                        $status      = "Fail"
+                                        $category    = "TCP_FAIL"
+                                    }
+                                    # Typically infra / FW; allow retry for a couple of attempts
+                                    $shouldRetry = ($attempt -lt $maxAttempts)
+                                }
+                                28 {
+                                    if ($timeConn -gt 0) {
+                                        # This is your "first scenario": TCP connect succeeded, later phase timed out.
+                                        # Egress is good => treat as PASS, and DO NOT retry.
+                                        $status      = "Pass"
+                                        $category    = "CONNECT_OK_HTTP_TIMEOUT"
+                                        $shouldRetry = $false
+                                    } else {
+                                        # Connect-timeout: second scenario – real network failure.
+                                        $status      = "Fail"
+                                        $category    = "CONNECT_TIMEOUT"
+                                        # Maybe transient; allow retry up to maxAttempts
+                                        $shouldRetry = ($attempt -lt $maxAttempts)
+                                    }
+                                }
+                                35 {
+                                    $status      = "Fail"
+                                    $category    = "TLS_HANDSHAKE_FAIL"
+                                    $shouldRetry = $false
+                                }
+                                51 { # cert verify failed
+                                    $status      = "Pass"   # network reachable; cert issues
+                                    $category    = "TLS_CERT_FAIL"
+                                    $shouldRetry = $false
+                                }
+                                60 { # cert verify failed
+                                    $status      = "Pass"
+                                    $category    = "TLS_CERT_FAIL"
+                                    $shouldRetry = $false
+                                }
+                                Default {
+                                    if ($timeConn -gt 0) {
+                                        # Something failed after connect; treat as reachable but abnormal.
+                                        $status      = "Pass"
+                                        $category    = "UNKNOWN_AFTER_CONNECT"
+                                        $shouldRetry = $false
+                                    } else {
+                                        $status      = "Fail"
+                                        $category    = "UNKNOWN_BEFORE_CONNECT"
+                                        $shouldRetry = ($attempt -lt $maxAttempts)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ($status -eq "Fail") {
+                        $ErrorMessage = ($rawOutput -join "`n")
+                    }
+
+                    # Build connection info for CSV
+                    $connectionInfo = "RemoteIp=$remoteIp; Category=$category; CurlExit=$curlExitCode; TimeConn=$timeConn; TimeTotal=$timeTotal"
+
+                    if (-not $shouldRetry) {
+                        break
+                    }
+                    else {
+                        Start-Sleep -Seconds 5
+                    }
                 }
-            }
-
-            # Capture connection info
-            $connectionInfo = ($rawOutput | Where-Object { $_ -match '^Connected to' }) -join '; '
-
-
-                # Determine status
-                $allowedCodes = @("200","201","204","400","401","403","404")
-                if ($httpCode -in $allowedCodes) {
-                $status = "Pass"
-            } elseif ($connectionInfo) {
-                $status = "Pass"
-            } elseif ($rawOutput -match 'Could not resolve host') {
-                $status = "Fail"
-            } else {
-                $status = "Fail"
-            }
-            if ($status -eq "Fail") {
-                $ErrorMessage = ($rawOutput -join "`n")
-            }
-                    break
-                } catch {
+                catch {
                     $ErrorMessage = $_.Exception.Message
+                    $status       = "Fail"
+                    $connectionInfo = "Category=EXCEPTION; Message=$($ErrorMessage)"
+                    # In exception cases, retry up to maxAttempts
+                    if ($attempt -lt $maxAttempts) {
+                        Start-Sleep -Seconds 5
+                    } else {
+                        break
+                    }
                 }
-                Start-Sleep -Seconds 5
             }
 
             [PSCustomObject]@{
