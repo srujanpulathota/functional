@@ -1,16 +1,42 @@
-kudu_ssh_user@e28e5994955d:/$ curl -vk https://api-devstg.t-mobile.com/oauth/v2/token?grant_type=client_credentials
-*   Trying 10.175.94.138:443...
-* Connected to api-devstg.t-mobile.com (10.175.94.138) port 443 (#0)
+kudu_ssh_user@e28e5994955d:/$ curl -vk https://cidmnd-customerinfo-iotcustomersearch.dev01.npe.tedge.adn-gw.t-mobile.com
+*   Trying 10.61.67.189:443...
+* Connected to cidmnd-customerinfo-iotcustomersearch.dev01.npe.tedge.adn-gw.t-mobile.com (10.61.67.189) port 443 (#0)
 * ALPN, offering h2
 * ALPN, offering http/1.1
 * successfully set certificate verify locations:
 *  CAfile: /etc/ssl/certs/ca-certificates.crt
 *  CApath: /etc/ssl/certs
 * TLSv1.3 (OUT), TLS handshake, Client hello (1):
-* OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api-devstg.t-mobile.com:443 
-* Closing connection 0
-curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api-devstg.t-mobile.com:443
-
-
-kudu_ssh_user@e28e5994955d:/$ curl -vk https://crdp.px-npe4115.tke.t-mobile.com/v1/protectbulk
-*   Trying 10.61.67.83:443...
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=US; ST=Washington; L=Bothell; O=T-Mobile USA, Inc.; OU=Business Systems; CN=*.dev.npe.tedge.adn-gw.t-mobile.com
+*  start date: Nov  5 21:02:47 2025 GMT
+*  expire date: Nov  5 21:02:47 2026 GMT
+*  issuer: DC=org; DC=gsm1900; CN=T-Mobile USA Enterprise Issuing CA 01
+*  SSL certificate verify result: self signed certificate in certificate chain (19), continuing anyway.
+* Using HTTP2, server supports multi-use
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x646c80a670c0)
+> GET / HTTP/2
+> Host: cidmnd-customerinfo-iotcustomersearch.dev01.npe.tedge.adn-gw.t-mobile.com
+> user-agent: curl/7.74.0
+> accept: */*
+> 
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* old SSL session ID is stale, removing
+* Connection state changed (MAX_CONCURRENT_STREAMS == 2147483647)!
+< HTTP/2 404 
+< date: Fri, 28 Nov 2025 04:43:48 GMT
+< server:  
+< 
+* Connection #0 to host cidmnd-customerinfo-iotcustomersearch.dev01.npe.tedge.adn-gw.t-mobile.com left intact
