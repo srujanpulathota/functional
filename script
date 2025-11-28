@@ -66,6 +66,12 @@ foreach ($appService in $appServices.appServices) {
     $kuduUrl      = "https://$appName.scm.azurewebsites.net/api/command?waitForExit=true&log=true"
 
     foreach ($endpoint in $endpoints) {
+
+        # HARD FILTER: ignore .net endpoints completely – no test, no CSV row
+        if ($endpoint -like "*.net*") {
+            continue
+        }
+
         $ps = [powershell]::Create()
         $ps.RunspacePool = $runspacePool
 
@@ -80,12 +86,12 @@ foreach ($appService in $appServices.appServices) {
             $attempt        = 0
             $maxAttempts    = 3
 
-            # Derive protocol from endpoint string
+            # Derive protocol
             if ($endpoint -match '^(https?)://') {
                 $protocol = $Matches[1]
             }
 
-            # Curl tunables – keep these small so we do not hang forever
+            # Curl limits
             $connectTimeout = 3  # seconds for TCP connect
             $totalTimeout   = 5  # overall per-endpoint timeout
 
@@ -100,29 +106,35 @@ foreach ($appService in $appServices.appServices) {
 
                 try {
                     # curl:
-                    #  -k            : ignore cert validation (we care about reachability)
-                    #  -sS -o /dev/null : silent, discard body
-                    #  --connect-timeout / --max-time : bound each attempt
-                    #  -w ...        : print metrics in a single line
-                    # then echo CURL_EXIT:<code> from shell
-                    $command = "curl -k -sS -o /dev/null --connect-timeout $connectTimeout --max-time $totalTimeout " +
+                    #  -skv        : ignore cert, silent + verbose (to see "Connected to")
+                    #  -o /dev/null: discard body
+                    #  --connect-timeout / --max-time: cap each attempt
+                    #  2>&1        : send verbose to stdout for Kudu
+                    #  -w ...      : metrics in one line
+                    #  echo CURL_EXIT:$? : capture curl exit code
+                    $command = "curl -skv -o /dev/null --connect-timeout $connectTimeout --max-time $totalTimeout " +
                                "-w `"HTTP_CODE:%{http_code} REMOTE_IP:%{remote_ip} TIME_NAMEL:%{time_namelookup} TIME_CONN:%{time_connect} TIME_TLS:%{time_appconnect} TIME_TTFB:%{time_starttransfer} TIME_TOTAL:%{time_total}`" " +
-                               "$endpoint; echo CURL_EXIT:`$?"
+                               "$endpoint 2>&1; echo CURL_EXIT:`$?"
 
                     $body     = @{ command = $command; dir = "/home" } | ConvertTo-Json
                     $response = Invoke-RestMethod -Uri $kuduUrl -Method POST -Body $body -ContentType "application/json" -Headers $headers
 
-                    # Normalize output lines
                     $rawOutput = $response.Output -replace "`r","" -split "`n"
 
-                    # Parse curl exit code
+                    # Did we ever connect?
+                    $connected = $false
+                    if ($rawOutput -match '^\* Connected to ') {
+                        $connected = $true
+                    }
+
+                    # Curl exit code
                     $curlExitLine = $rawOutput | Where-Object { $_ -match '^CURL_EXIT:' } | Select-Object -Last 1
                     $curlExitCode = -1
                     if ($curlExitLine) {
                         $curlExitCode = [int]($curlExitLine -replace '^CURL_EXIT:','' ).Trim()
                     }
 
-                    # Parse metrics line
+                    # Metrics line
                     $metricsLine = $rawOutput | Where-Object { $_ -match '^HTTP_CODE:' } | Select-Object -Last 1
                     $remoteIp    = ""
                     [double]$timeConn  = 0
@@ -141,125 +153,73 @@ foreach ($appService in $appServices.appServices) {
                         if ($metricsLine -match 'TIME_TOTAL:([0-9.]+)')   { [double]$timeTotal = $Matches[1] }
                     }
 
-                    $endpointHasDotNet = $endpoint -like "*.net*"
-
-                    # =========================
-                    # CLASSIFICATION LOGIC
-                    # =========================
+                    # ==============
+                    # CLASSIFICATION
+                    # ==============
 
                     if ($httpCode -ne "000") {
-                        # Any HTTP code means: TCP + (if https) TLS succeeded.
-                        # For egress, that is reachable.
-
+                        # Any HTTP code => TCP/TLS OK => egress reachable
                         $httpInt = 0
                         [void][int]::TryParse($httpCode, [ref]$httpInt)
 
-                        if ($httpInt -ge 200 -and $httpInt -lt 300) {
-                            $category = "HTTP_2XX"
-                        }
-                        elseif ($httpInt -ge 300 -and $httpInt -lt 400) {
-                            $category = "HTTP_3XX"
-                        }
-                        elseif ($httpInt -ge 400 -and $httpInt -lt 500) {
-                            $category = "HTTP_4XX"
-                        }
-                        elseif ($httpInt -ge 500 -and $httpInt -lt 600) {
-                            $category = "HTTP_5XX"
-                        }
-                        else {
-                            $category = "HTTP_OTHER"
-                        }
+                        if     ($httpInt -ge 200 -and $httpInt -lt 300) { $category = "HTTP_2XX" }
+                        elseif ($httpInt -ge 300 -and $httpInt -lt 400) { $category = "HTTP_3XX" }
+                        elseif ($httpInt -ge 400 -and $httpInt -lt 500) { $category = "HTTP_4XX" }
+                        elseif ($httpInt -ge 500 -and $httpInt -lt 600) { $category = "HTTP_5XX" }
+                        else                                             { $category = "HTTP_OTHER" }
 
-                        # Special handling for 403 – Pass only if endpoint contains .net
-                        if ($httpCode -eq "403" -and -not $endpointHasDotNet) {
-                            $status      = "Fail"
-                            $shouldRetry = $false
-                        } else {
-                            # Your 404 example falls here: PASS.
-                            $status      = "Pass"
-                            $shouldRetry = $false
-                        }
+                        # Your 404 example stays here: reachable ⇒ PASS
+                        $status      = "Pass"
+                        $shouldRetry = $false
                     }
                     else {
-                        # HTTP 000 – need to look at curl exit code + timings
+                        # HTTP 000 ⇒ check DNS text, connect flag, timings, exit code
+
+                        # DNS resolution failure (trust the text if present)
                         if ($rawOutput -match 'Could not resolve host') {
                             $status      = "Fail"
                             $category    = "DNS_FAIL"
                             $shouldRetry = $false
                         }
-                        else {
+                        # NO HTTP CODE + NO CONNECT ⇒ true network failure
+                        elseif (-not $connected -and $timeConn -eq 0) {
                             switch ($curlExitCode) {
-                                0 {
-                                    # Exit 0 but code 000 is rare.
-                                    if ($timeConn -gt 0) {
-                                        $status      = "Pass"
-                                        $category    = "CONNECT_OK_NO_HTTP_CODE"
-                                        $shouldRetry = $false
-                                    } else {
-                                        $status      = "Fail"
-                                        $category    = "UNKNOWN_BEFORE_CONNECT"
-                                        $shouldRetry = $false
-                                    }
-                                }
                                 6 {
                                     $status      = "Fail"
                                     $category    = "DNS_FAIL"
                                     $shouldRetry = $false
                                 }
                                 7 {
-                                    if ($timeConn -gt 0) {
-                                        # Connected but failed after that – infra behavior but egress proven.
-                                        $status      = "Pass"
-                                        $category    = "TCP_FAIL_AFTER_CONNECT"
-                                        $shouldRetry = $false
-                                    } else {
-                                        $status      = "Fail"
-                                        $category    = "TCP_FAIL"
-                                        $shouldRetry = ($attempt -lt $maxAttempts)
-                                    }
+                                    $status      = "Fail"
+                                    $category    = "TCP_FAIL"
+                                    $shouldRetry = ($attempt -lt $maxAttempts)
                                 }
                                 28 {
-                                    if ($timeConn -gt 0) {
-                                        # First scenario: TCP connect ok, later timeout.
-                                        $status      = "Pass"
-                                        $category    = "CONNECT_OK_HTTP_TIMEOUT"
-                                        $shouldRetry = $false
-                                    } else {
-                                        # Second scenario: connect timeout (never got a socket).
-                                        $status      = "Fail"
-                                        $category    = "CONNECT_TIMEOUT"
-                                        $shouldRetry = ($attempt -lt $maxAttempts)
-                                    }
-                                }
-                                35 {
-                                    # TLS handshake fail – we reached the host; treat as reachable but abnormal
-                                    $status      = "Pass"
-                                    $category    = "TLS_HANDSHAKE_FAIL"
-                                    $shouldRetry = $false
-                                }
-                                51 { # cert verify failed
-                                    $status      = "Pass"
-                                    $category    = "TLS_CERT_FAIL"
-                                    $shouldRetry = $false
-                                }
-                                60 { # cert verify failed
-                                    $status      = "Pass"
-                                    $category    = "TLS_CERT_FAIL"
-                                    $shouldRetry = $false
+                                    $status      = "Fail"
+                                    $category    = "CONNECT_TIMEOUT"
+                                    $shouldRetry = ($attempt -lt $maxAttempts)
                                 }
                                 Default {
-                                    if ($timeConn -gt 0) {
-                                        # Anything failing after connect – egress is good.
-                                        $status      = "Pass"
-                                        $category    = "UNKNOWN_AFTER_CONNECT"
-                                        $shouldRetry = $false
-                                    } else {
-                                        $status      = "Fail"
-                                        $category    = "UNKNOWN_BEFORE_CONNECT"
-                                        $shouldRetry = ($attempt -lt $maxAttempts)
-                                    }
+                                    $status      = "Fail"
+                                    $category    = "UNKNOWN_BEFORE_CONNECT"
+                                    $shouldRetry = ($attempt -lt $maxAttempts)
                                 }
                             }
+                        }
+                        else {
+                            # EDGE CASE ZONE:
+                            # We KNOW we connected (either verbose says Connected or timeConn>0).
+                            # This is your "first scenario" – egress is good.
+                            switch ($curlExitCode) {
+                                28 { $category = "CONNECT_OK_HTTP_TIMEOUT" } # connect ok, later timeout
+                                35 { $category = "TLS_HANDSHAKE_FAIL" }
+                                51 { $category = "TLS_CERT_FAIL" }
+                                60 { $category = "TLS_CERT_FAIL" }
+                                7  { $category = "TCP_FAIL_AFTER_CONNECT" }
+                                Default { $category = "UNKNOWN_AFTER_CONNECT" }
+                            }
+                            $status      = "Pass"
+                            $shouldRetry = $false
                         }
                     }
 
@@ -267,8 +227,7 @@ foreach ($appService in $appServices.appServices) {
                         $ErrorMessage = ($rawOutput -join "`n")
                     }
 
-                    # Build connection info metadata for CSV
-                    $connectionInfo = "RemoteIp=$remoteIp; Category=$category; CurlExit=$curlExitCode; TimeConn=$timeConn; TimeTotal=$timeTotal"
+                    $connectionInfo = "RemoteIp=$remoteIp; Category=$category; CurlExit=$curlExitCode; Connected=$connected; TimeConn=$timeConn; TimeTotal=$timeTotal"
 
                     if (-not $shouldRetry) {
                         break
