@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+import csv
+import socket
+import sys
+from urllib.parse import urlparse
+
+DEFAULT_TIMEOUT_SECONDS = 5.0
+
+
+def extract_hostname(raw_url: str) -> str:
+    """
+    Extract hostname from a URL or raw host string.
+
+    Handles:
+    - Full URLs like https://example.com/path
+    - Bare hosts like example.com
+    - Hosts with ports like example.com:8080
+    """
+    raw_url = raw_url.strip()
+    if not raw_url:
+        return ""
+
+    # If there's no scheme, urlparse treats the whole thing as path.
+    # Prepend // so it is treated as netloc (RFC 3986 style).
+    if "://" not in raw_url:
+        parsed = urlparse("//" + raw_url)
+    else:
+        parsed = urlparse(raw_url)
+
+    hostname = parsed.hostname or ""
+    return hostname.strip("[]")  # Remove brackets for IPv6 literals if present
+
+
+def resolve_ip_addresses(hostname: str) -> list[str]:
+    """
+    Resolve a hostname to a list of unique IP addresses (IPv4/IPv6).
+    Uses socket.getaddrinfo for robustness and supports both families.
+    """
+    # You can tweak this timeout globally for all socket operations.
+    socket.setdefaulttimeout(DEFAULT_TIMEOUT_SECONDS)
+
+    # getaddrinfo may return duplicates; we normalize and deduplicate.
+    try:
+        addrinfo_list = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as e:
+        # DNS resolution error (host not found, etc.)
+        raise RuntimeError(f"DNS resolution failed: {e}") from e
+    except socket.timeout as e:
+        raise RuntimeError(f"DNS resolution timed out after {DEFAULT_TIMEOUT_SECONDS}s") from e
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error during DNS lookup: {e}") from e
+
+    ips = []
+    for family, _, _, _, sockaddr in addrinfo_list:
+        try:
+            if family in (socket.AF_INET, socket.AF_INET6):
+                ip = sockaddr[0]
+                ips.append(ip)
+        except Exception:
+            # Ignore malformed sockaddr entries
+            continue
+
+    # Deduplicate while preserving order
+    unique_ips = []
+    seen = set()
+    for ip in ips:
+        if ip not in seen:
+            seen.add(ip)
+            unique_ips.append(ip)
+
+    return unique_ips
+
+
+def process_urls(input_file: str, output_file: str) -> None:
+    """
+    Read URLs from input_file, resolve IPs, and write results to output_file (CSV).
+
+    CSV columns:
+      - url
+      - ip_addresses (semicolon-separated if multiple)
+      - comment (e.g., error message if failed)
+    """
+    with open(input_file, "r", encoding="utf-8") as f_in, \
+            open(output_file, "w", encoding="utf-8", newline="") as f_out:
+
+        writer = csv.writer(f_out)
+        writer.writerow(["url", "ip_addresses", "comment"])
+
+        for line_no, raw_url in enumerate(f_in, start=1):
+            raw_url = raw_url.strip()
+
+            # Skip empty lines
+            if not raw_url:
+                continue
+
+            # Allow comment lines starting with '#'
+            if raw_url.startswith("#"):
+                continue
+
+            url = raw_url
+            hostname = extract_hostname(raw_url)
+
+            if not hostname:
+                writer.writerow([url, "", f"Line {line_no}: No hostname found"])
+                continue
+
+            try:
+                ips = resolve_ip_addresses(hostname)
+                if ips:
+                    ip_str = ";".join(ips)
+                    comment = ""
+                else:
+                    ip_str = ""
+                    comment = "No IPs returned"
+            except Exception as e:
+                ip_str = ""
+                comment = str(e)
+
+            writer.writerow([url, ip_str, comment])
+
+
+def main():
+    if len(sys.argv) != 3:
+        print(
+            f"Usage: {sys.argv[0]} <input_urls.txt> <output_results.csv>",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    try:
+        process_urls(input_file, output_file)
+    except Exception as e:
+        print(f"Fatal error: {e}", file=sys.stderr)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
