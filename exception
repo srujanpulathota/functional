@@ -1,2 +1,4 @@
-ConnectivityTest.ps1: The term 'Finish:' is not recognized as a name of a cmdlet, function, script file, or executable program.
-Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+Traceback (most recent call last):
+  File "egresstest.py", line 34, in <module>
+    def resolve_ip_addresses(hostname: str) -> list[str]:
+TypeError: 'type' object is not subscriptable
