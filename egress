@@ -3,6 +3,7 @@ import csv
 import socket
 import sys
 from urllib.parse import urlparse
+from typing import List  # <- key change for older Python versions
 
 DEFAULT_TIMEOUT_SECONDS = 5.0
 
@@ -31,24 +32,25 @@ def extract_hostname(raw_url: str) -> str:
     return hostname.strip("[]")  # Remove brackets for IPv6 literals if present
 
 
-def resolve_ip_addresses(hostname: str) -> list[str]:
+def resolve_ip_addresses(hostname: str) -> List[str]:
     """
     Resolve a hostname to a list of unique IP addresses (IPv4/IPv6).
     Uses socket.getaddrinfo for robustness and supports both families.
     """
-    # You can tweak this timeout globally for all socket operations.
+    # Set a timeout globally for socket operations.
     socket.setdefaulttimeout(DEFAULT_TIMEOUT_SECONDS)
 
-    # getaddrinfo may return duplicates; we normalize and deduplicate.
     try:
         addrinfo_list = socket.getaddrinfo(hostname, None)
     except socket.gaierror as e:
         # DNS resolution error (host not found, etc.)
-        raise RuntimeError(f"DNS resolution failed: {e}") from e
+        raise RuntimeError("DNS resolution failed: {0}".format(e))
     except socket.timeout as e:
-        raise RuntimeError(f"DNS resolution timed out after {DEFAULT_TIMEOUT_SECONDS}s") from e
+        raise RuntimeError(
+            "DNS resolution timed out after {0}s".format(DEFAULT_TIMEOUT_SECONDS)
+        )
     except Exception as e:
-        raise RuntimeError(f"Unexpected error during DNS lookup: {e}") from e
+        raise RuntimeError("Unexpected error during DNS lookup: {0}".format(e))
 
     ips = []
     for family, _, _, _, sockaddr in addrinfo_list:
@@ -101,7 +103,7 @@ def process_urls(input_file: str, output_file: str) -> None:
             hostname = extract_hostname(raw_url)
 
             if not hostname:
-                writer.writerow([url, "", f"Line {line_no}: No hostname found"])
+                writer.writerow([url, "", "Line {0}: No hostname found".format(line_no)])
                 continue
 
             try:
@@ -122,7 +124,7 @@ def process_urls(input_file: str, output_file: str) -> None:
 def main():
     if len(sys.argv) != 3:
         print(
-            f"Usage: {sys.argv[0]} <input_urls.txt> <output_results.csv>",
+            "Usage: {0} <input_urls.txt> <output_results.csv>".format(sys.argv[0]),
             file=sys.stderr,
         )
         sys.exit(1)
@@ -133,7 +135,7 @@ def main():
     try:
         process_urls(input_file, output_file)
     except Exception as e:
-        print(f"Fatal error: {e}", file=sys.stderr)
+        print("Fatal error: {0}".format(e), file=sys.stderr)
         sys.exit(2)
 
 
